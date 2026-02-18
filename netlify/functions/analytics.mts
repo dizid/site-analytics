@@ -1,3 +1,15 @@
+/**
+ * GET /api/analytics?days=7d|30d|90d
+ * Header: Authorization: Bearer <jwt>
+ *
+ * Per-user analytics endpoint:
+ * 1. Validates session JWT
+ * 2. Gets user's Google access token (transparently refreshes if needed)
+ * 3. Auto-discovers user's GA4 properties via Analytics Admin API
+ * 4. Fetches metrics + traffic sources for each property (batched)
+ * 5. Returns a ReportResponse with all discovered properties
+ */
+
 import type { Context } from '@netlify/functions'
 import type {
   DateRange,
@@ -7,10 +19,14 @@ import type {
   PropertyResult,
   ReportResponse,
 } from '../../src/types/analytics.js'
-import { JSON_HEADERS, validateAuth, getAccessToken } from './lib/auth.js'
+import { JSON_HEADERS, validateSession } from './lib/auth.js'
+import { getValidAccessToken } from './lib/tokens.js'
 
 // GA4 Data API base URL
 const DATA_API_BASE = 'https://analyticsdata.googleapis.com/v1beta/properties'
+
+// GA4 Admin API for property discovery
+const ADMIN_API_BASE = 'https://analyticsadmin.googleapis.com/v1beta'
 
 // Maximum properties per batch to stay within GA4 rate limits
 const BATCH_SIZE = 10
@@ -42,6 +58,70 @@ function parseDaysParam(url: URL): DateRange {
 }
 
 // ---------------------------------------------------------------------------
+// GA4 Admin API — property discovery
+// ---------------------------------------------------------------------------
+
+interface AdminPropertySummary {
+  property: string        // "properties/123456"
+  displayName: string
+}
+
+interface AdminAccountSummary {
+  name: string            // "accountSummaries/123"
+  displayName: string
+  propertySummaries?: AdminPropertySummary[]
+}
+
+interface AdminAccountSummariesResponse {
+  accountSummaries?: AdminAccountSummary[]
+  nextPageToken?: string
+}
+
+interface DiscoveredProperty {
+  propertyId: string     // "properties/123456"
+  displayName: string
+}
+
+/**
+ * Calls the GA4 Admin API to discover all properties the user has access to.
+ * Handles pagination — iterates until all pages are consumed.
+ */
+async function discoverProperties(token: string): Promise<DiscoveredProperty[]> {
+  const properties: DiscoveredProperty[] = []
+  let pageToken: string | undefined
+
+  do {
+    const url = new URL(`${ADMIN_API_BASE}/accountSummaries`)
+    if (pageToken) url.searchParams.set('pageToken', pageToken)
+
+    const response = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    if (!response.ok) {
+      const body = await response.text()
+      console.error(`Admin API accountSummaries failed (${response.status}): ${body}`)
+      throw new Error(`GA4 Admin API request failed (status ${response.status})`)
+    }
+
+    const data = await response.json() as AdminAccountSummariesResponse
+
+    for (const account of data.accountSummaries ?? []) {
+      for (const prop of account.propertySummaries ?? []) {
+        properties.push({
+          propertyId:  prop.property,
+          displayName: prop.displayName,
+        })
+      }
+    }
+
+    pageToken = data.nextPageToken
+  } while (pageToken)
+
+  return properties
+}
+
+// ---------------------------------------------------------------------------
 // GA4 response parsing types
 // ---------------------------------------------------------------------------
 
@@ -63,7 +143,7 @@ interface GA4ReportResponse {
 }
 
 // ---------------------------------------------------------------------------
-// GA4 API calls
+// GA4 Data API calls
 // ---------------------------------------------------------------------------
 
 // Fetches the metrics + daily trend report for a single property.
@@ -252,9 +332,7 @@ async function fetchProperty(
 // ---------------------------------------------------------------------------
 
 // GET /api/analytics?days=7d|30d|90d
-// Header: x-dashboard-password
-// Env:    GA_PROPERTY_IDS  — comma-separated, e.g. "properties/123,properties/456"
-//         GA_PROPERTY_NAMES — comma-separated display names (same order, optional)
+// Header: Authorization: Bearer <jwt>
 // Returns: ReportResponse
 export default async (request: Request, _context: Context): Promise<Response> => {
   // Handle OPTIONS preflight
@@ -269,82 +347,81 @@ export default async (request: Request, _context: Context): Promise<Response> =>
     )
   }
 
-  // Validate password header
-  const authError = validateAuth(request)
-  if (authError) return authError
-
-  // Read and validate property IDs from env
-  const propertyIdsEnv = process.env.GA_PROPERTY_IDS
-  if (!propertyIdsEnv) {
-    console.error('GA_PROPERTY_IDS environment variable is not configured')
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: JSON_HEADERS }
-    )
-  }
-
-  const propertyIds = propertyIdsEnv
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
-
-  if (propertyIds.length === 0) {
-    console.error('GA_PROPERTY_IDS is empty after parsing')
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: JSON_HEADERS }
-    )
-  }
-
-  // Build display name map — falls back to propertyId when name not provided
-  const propertyNamesEnv = process.env.GA_PROPERTY_NAMES ?? ''
-  const propertyNames = propertyNamesEnv
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
-
-  const displayNameFor = (index: number, id: string): string =>
-    propertyNames[index]?.length > 0 ? propertyNames[index] : id
+  // Validate session JWT
+  const session = await validateSession(request)
+  if (session instanceof Response) return session
 
   // Parse query params
-  const url = new URL(request.url)
-  const days = parseDaysParam(url)
+  const url      = new URL(request.url)
+  const days     = parseDaysParam(url)
   const dateRange = buildDateRange(days)
 
   try {
-    const token = await getAccessToken()
+    // Get the user's Google access token (auto-refreshes if near expiry)
+    // A 401 from getValidAccessToken means the user needs to re-authenticate
+    let token: string
+    try {
+      token = await getValidAccessToken(session.sub)
+    } catch (err) {
+      console.error(`Failed to get valid access token for user ${session.sub}:`, err)
+      return new Response(
+        JSON.stringify({ error: 'Session expired — please sign in again' }),
+        { status: 401, headers: JSON_HEADERS }
+      )
+    }
+
+    // Auto-discover properties the user has access to in Google Analytics
+    let properties: DiscoveredProperty[]
+    try {
+      properties = await discoverProperties(token)
+    } catch (err) {
+      console.error('Property discovery failed:', err)
+      return new Response(
+        JSON.stringify({ error: 'Failed to discover GA4 properties' }),
+        { status: 502, headers: JSON_HEADERS }
+      )
+    }
+
+    // No properties found — valid state, return empty list with a clear message
+    if (properties.length === 0) {
+      const report: ReportResponse = {
+        generatedAt: new Date().toISOString(),
+        dateRange:   days,
+        properties:  [],
+      }
+      return new Response(
+        JSON.stringify(report),
+        { status: 200, headers: JSON_HEADERS }
+      )
+    }
+
     const results: PropertyResult[] = []
 
     // Fan out across all properties in batches of BATCH_SIZE to respect rate limits
-    for (let i = 0; i < propertyIds.length; i += BATCH_SIZE) {
-      const batch = propertyIds.slice(i, i + BATCH_SIZE)
+    for (let i = 0; i < properties.length; i += BATCH_SIZE) {
+      const batch = properties.slice(i, i + BATCH_SIZE)
 
       const batchResults = await Promise.allSettled(
-        batch.map((id, batchIndex) =>
-          fetchProperty(
-            id,
-            displayNameFor(i + batchIndex, id),
-            dateRange,
-            token
-          )
+        batch.map(({ propertyId, displayName }) =>
+          fetchProperty(propertyId, displayName, dateRange, token)
         )
       )
 
-      // allSettled guarantees we get a result for every property.
-      // fetchProperty already catches its own errors and returns a PropertyResult,
+      // allSettled guarantees a result for every property.
+      // fetchProperty catches its own errors and returns a PropertyResult,
       // so 'rejected' only happens if fetchProperty itself throws unexpectedly.
       for (const [index, result] of batchResults.entries()) {
         if (result.status === 'fulfilled') {
           results.push(result.value)
         } else {
           // Defensive fallback — fetchProperty should never reject
-          const id = batch[index] ?? 'unknown'
+          const { propertyId, displayName } = batch[index] ?? { propertyId: 'unknown', displayName: 'unknown' }
           results.push({
-            propertyId:  id,
-            displayName: displayNameFor(i + index, id),
-            metrics:     null,
-            sources:     [],
-            error:       result.reason instanceof Error
+            propertyId,
+            displayName,
+            metrics: null,
+            sources: [],
+            error:   result.reason instanceof Error
               ? result.reason.message
               : 'Unexpected error',
           })

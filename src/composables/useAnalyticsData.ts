@@ -2,6 +2,9 @@
  * useAnalyticsData.ts
  * Main data composable — orchestrates fetching, caching, sorting, and view state.
  * Module-level singleton so state is shared across all components that call this.
+ *
+ * Cache keys are namespaced by user ID so different Google accounts never
+ * see each other's cached data: `ga4:<userId>:<dateRange>`.
  */
 
 import { ref, computed, watch, readonly } from 'vue'
@@ -15,6 +18,7 @@ import type {
 import { api } from '../lib/api'
 import { useCache, CACHE_TTL_6H } from './useCache'
 import { useDateRange } from './useDateRange'
+import { useAuth } from './useAuth'
 
 const VIEWMODE_STORAGE_KEY = 'ga4:viewMode'
 
@@ -41,6 +45,31 @@ const sortDirection = ref<SortDirection>('desc')
 // Grab shared instances (these are singletons themselves)
 const cache = useCache()
 const { dateRange } = useDateRange()
+const { getUserId } = useAuth()
+
+// ---------------------------------------------------------------------------
+// Cache key helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the namespaced cache key for the current user + date range.
+ * Falls back to a generic key if the user ID is unavailable (shouldn't happen
+ * in practice since analytics is only fetched while authenticated).
+ */
+function getCacheKey(): string {
+  const userId = getUserId()
+  return userId ? `ga4:${userId}:${dateRange.value}` : `ga4:${dateRange.value}`
+}
+
+/**
+ * On first use, remove any legacy un-namespaced cache entries from the old
+ * password-auth system (e.g. `ga4:7d`, `ga4:30d`, `ga4:90d`) so they don't
+ * waste localStorage space or cause confusion.
+ */
+function cleanLegacyCacheKeys(): void {
+  const legacy = ['ga4:7d', 'ga4:30d', 'ga4:90d']
+  legacy.forEach((key) => localStorage.removeItem(key))
+}
 
 // ---------------------------------------------------------------------------
 // Computed
@@ -88,7 +117,10 @@ const totalSessions: ComputedRef<number> = computed(() =>
 let fetchId = 0
 
 async function fetchReport(force = false): Promise<void> {
-  const cacheKey = `ga4:${dateRange.value}`
+  // Remove old un-namespaced cache entries from the password-auth era
+  cleanLegacyCacheKeys()
+
+  const cacheKey = getCacheKey()
 
   // Return cached data when available and not forcing a refresh
   if (!force) {
@@ -110,8 +142,12 @@ async function fetchReport(force = false): Promise<void> {
     // Discard if a newer fetch was triggered while we were awaiting
     if (myFetchId !== fetchId) return
 
-    // Persist to cache with 6-hour TTL
-    cache.set(cacheKey, { properties: response.properties, generatedAt: response.generatedAt }, CACHE_TTL_6H)
+    // Persist to cache with 6-hour TTL, namespaced by user ID
+    cache.set(
+      cacheKey,
+      { properties: response.properties, generatedAt: response.generatedAt },
+      CACHE_TTL_6H,
+    )
 
     properties.value = response.properties
     lastFetchedAt.value = response.generatedAt

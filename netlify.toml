@@ -15,8 +15,18 @@
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
 
 [[redirects]]
-  from = "/api/auth"
-  to = "/.netlify/functions/auth"
+  from = "/api/oauth/authorize"
+  to = "/.netlify/functions/oauth-authorize"
+  status = 200
+
+[[redirects]]
+  from = "/api/oauth/callback"
+  to = "/.netlify/functions/oauth-callback"
+  status = 200
+
+[[redirects]]
+  from = "/api/oauth/logout"
+  to = "/.netlify/functions/oauth-logout"
   status = 200
 
 [[redirects]]
@@ -25,8 +35,13 @@
   status = 200
 
 [[redirects]]
-  from = "/api/properties"
-  to = "/.netlify/functions/properties"
+  from = "/privacy"
+  to = "/privacy.html"
+  status = 200
+
+[[redirects]]
+  from = "/terms"
+  to = "/terms.html"
   status = 200
 
 [[redirects]]

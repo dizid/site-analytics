@@ -45,3 +45,9 @@ export interface PropertyInfo {
   propertyId: string
   displayName: string
 }
+
+export interface UserInfo {
+  email: string
+  name: string
+  picture: string
+}

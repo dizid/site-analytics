@@ -2,12 +2,11 @@
 /**
  * DashboardHeader.vue
  * Sticky top bar with title, last-updated timestamp, view toggle,
- * date range picker, refresh button, and logout.
+ * date range picker, refresh button, and user avatar + logout.
  */
 
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import type { ViewMode } from '../types/analytics'
-import type { DateRange } from '../types/analytics'
+import type { ViewMode, DateRange, UserInfo } from '../types/analytics'
 import DateRangePicker from './DateRangePicker.vue'
 import { useDateRange } from '../composables/useDateRange'
 
@@ -15,6 +14,8 @@ const props = defineProps<{
   lastFetchedAt: string | null
   viewMode: ViewMode
   isLoading: boolean
+  /** Authenticated user info — null only before auth resolves (shouldn't happen here) */
+  user: UserInfo | null
 }>()
 
 const emit = defineEmits<{
@@ -61,6 +62,23 @@ const lastUpdatedLabel = computed<string>(() => {
     minute: '2-digit',
   })
 })
+
+// ---------------------------------------------------------------------------
+// User avatar fallback
+// ---------------------------------------------------------------------------
+
+/** Show the first letter of name or email if the profile image fails to load. */
+const avatarFallback = computed<string>(() => {
+  if (!props.user) return '?'
+  const src = props.user.name || props.user.email
+  return src.charAt(0).toUpperCase()
+})
+
+const avatarError = ref(false)
+
+function onAvatarError(): void {
+  avatarError.value = true
+}
 
 // ---------------------------------------------------------------------------
 // Date range v-model bridge for DateRangePicker
@@ -160,13 +178,48 @@ const selectedRange = computed<DateRange>({
           </svg>
         </button>
 
-        <!-- Logout button -->
+        <!-- User avatar + logout -->
         <button
+          v-if="user"
+          type="button"
+          class="flex items-center gap-2 text-xs text-text-muted hover:text-text-secondary transition-colors px-2 py-1.5 rounded-lg hover:bg-white/5 cursor-pointer"
+          :title="`Signed in as ${user.email} — click to sign out`"
+          @click="emit('logout')"
+        >
+          <!-- Profile picture — falls back to initial letter if image 404s -->
+          <span class="relative w-6 h-6 shrink-0">
+            <img
+              v-if="user.picture && !avatarError"
+              :src="user.picture"
+              :alt="user.name"
+              referrerpolicy="no-referrer"
+              class="w-6 h-6 rounded-full object-cover"
+              @error="onAvatarError"
+            />
+            <!-- Fallback: coloured circle with first letter -->
+            <span
+              v-else
+              class="w-6 h-6 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center text-accent text-xs font-semibold"
+              aria-hidden="true"
+            >
+              {{ avatarFallback }}
+            </span>
+          </span>
+
+          <!-- Name (hidden on very small screens to save space) -->
+          <span class="hidden sm:inline truncate max-w-[120px]">{{ user.name || user.email }}</span>
+          <span class="text-text-muted">·</span>
+          <span>Sign out</span>
+        </button>
+
+        <!-- Fallback logout (no user info loaded) -->
+        <button
+          v-else
           type="button"
           class="text-xs text-text-muted hover:text-text-secondary transition-colors px-2 py-1.5 rounded-lg hover:bg-white/5 cursor-pointer"
           @click="emit('logout')"
         >
-          Logout
+          Sign out
         </button>
 
       </div>

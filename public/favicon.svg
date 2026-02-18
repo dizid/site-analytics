@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Dark background circle -->
+  <rect width="32" height="32" rx="8" fill="#0f172a"/>
+  <!-- Bar chart icon in accent color (#6366f1) — 3 bars representing analytics -->
+  <rect x="5" y="18" width="5" height="9" rx="1" fill="#6366f1"/>
+  <rect x="13" y="11" width="5" height="16" rx="1" fill="#6366f1"/>
+  <rect x="21" y="5" width="5" height="22" rx="1" fill="#6366f1" opacity="0.7"/>
+  <!-- Trend line across the tops of bars -->
+  <polyline points="7.5,18 15.5,11 23.5,5" stroke="#a5b4fc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <!-- Background gradient -->
+    <radialGradient id="glow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Card glass effect -->
+    <linearGradient id="glass" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.03"/>
+    </linearGradient>
+    <!-- Sparkline gradient -->
+    <linearGradient id="spark" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#6366f1" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#0f172a"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+
+  <!-- Dot grid pattern (subtle) -->
+  <g opacity="0.06">
+    <pattern id="dots" x="0" y="0" width="32" height="32" patternUnits="userSpaceOnUse">
+      <circle cx="16" cy="16" r="1" fill="#f8fafc"/>
+    </pattern>
+    <rect width="1200" height="630" fill="url(#dots)"/>
+  </g>
+
+  <!-- Left side: Text content -->
+  <!-- Logo mark -->
+  <g transform="translate(80, 80)">
+    <rect width="40" height="40" rx="8" fill="#6366f1"/>
+    <rect x="8" y="20" width="6" height="12" rx="1" fill="#0f172a"/>
+    <rect x="17" y="14" width="6" height="18" rx="1" fill="#0f172a"/>
+    <rect x="26" y="8" width="6" height="24" rx="1" fill="#0f172a"/>
+  </g>
+  <text x="132" y="112" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700" fill="#f8fafc">StatPilot</text>
+
+  <!-- Headline -->
+  <text x="80" y="220" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" fill="#f8fafc">Every GA4 property.</text>
+  <text x="80" y="282" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" fill="#f8fafc">One dashboard.</text>
+  <text x="80" y="344" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" fill="#6366f1">Two seconds.</text>
+
+  <!-- Subheadline -->
+  <text x="80" y="400" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#94a3b8">Sign in with Google. Auto-discover all your properties.</text>
+  <text x="80" y="430" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#94a3b8">Sessions, users, bounce rate, trends — at a glance.</text>
+
+  <!-- Free badge -->
+  <rect x="80" y="470" width="240" height="40" rx="20" fill="#6366f1" opacity="0.15"/>
+  <rect x="80" y="470" width="240" height="40" rx="20" fill="none" stroke="#6366f1" stroke-opacity="0.3" stroke-width="1"/>
+  <text x="200" y="496" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#a5b4fc" text-anchor="middle">Free for up to 3 properties</text>
+
+  <!-- Right side: Mini dashboard mockup -->
+  <!-- Dashboard container -->
+  <rect x="660" y="100" width="460" height="430" rx="16" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.1" stroke-width="1"/>
+
+  <!-- Mock header bar -->
+  <rect x="680" y="120" width="420" height="36" rx="8" fill="#ffffff" fill-opacity="0.05"/>
+  <circle cx="700" cy="138" r="6" fill="#6366f1" opacity="0.6"/>
+  <rect x="714" y="132" width="80" height="12" rx="3" fill="#ffffff" fill-opacity="0.15"/>
+  <!-- Date pills -->
+  <rect x="1020" y="128" width="32" height="20" rx="10" fill="#6366f1" opacity="0.3"/>
+  <rect x="1056" y="128" width="32" height="20" rx="10" fill="#ffffff" fill-opacity="0.05"/>
+
+  <!-- Mock site card 1 -->
+  <rect x="680" y="172" width="200" height="120" rx="12" fill="#ffffff" fill-opacity="0.05" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+  <rect x="696" y="188" width="90" height="10" rx="3" fill="#f8fafc" fill-opacity="0.6"/>
+  <rect x="696" y="206" width="50" height="8" rx="2" fill="#94a3b8" fill-opacity="0.4"/>
+  <!-- Mini sparkline -->
+  <polyline points="696,260 712,252 728,256 744,240 760,244 776,232 792,238 808,228 824,236 840,220 856,224 864,218" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Metric badges -->
+  <rect x="696" y="270" width="36" height="14" rx="4" fill="#22c55e" fill-opacity="0.15"/>
+  <rect x="738" y="270" width="36" height="14" rx="4" fill="#ffffff" fill-opacity="0.05"/>
+
+  <!-- Mock site card 2 -->
+  <rect x="900" y="172" width="200" height="120" rx="12" fill="#ffffff" fill-opacity="0.05" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+  <rect x="916" y="188" width="75" height="10" rx="3" fill="#f8fafc" fill-opacity="0.6"/>
+  <rect x="916" y="206" width="60" height="8" rx="2" fill="#94a3b8" fill-opacity="0.4"/>
+  <!-- Mini sparkline -->
+  <polyline points="916,258 932,254 948,260 964,248 980,252 996,236 1012,242 1028,230 1044,238 1060,226 1076,222 1084,228" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="916" y="270" width="36" height="14" rx="4" fill="#f59e0b" fill-opacity="0.15"/>
+  <rect x="958" y="270" width="36" height="14" rx="4" fill="#ffffff" fill-opacity="0.05"/>
+
+  <!-- Mock site card 3 -->
+  <rect x="680" y="308" width="200" height="120" rx="12" fill="#ffffff" fill-opacity="0.05" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+  <rect x="696" y="324" width="100" height="10" rx="3" fill="#f8fafc" fill-opacity="0.6"/>
+  <rect x="696" y="342" width="45" height="8" rx="2" fill="#94a3b8" fill-opacity="0.4"/>
+  <polyline points="696,394 712,390 728,396 744,384 760,388 776,376 792,380 808,370 824,374 840,362 856,366 864,358" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="696" y="406" width="36" height="14" rx="4" fill="#22c55e" fill-opacity="0.15"/>
+  <rect x="738" y="406" width="36" height="14" rx="4" fill="#ffffff" fill-opacity="0.05"/>
+
+  <!-- Mock site card 4 -->
+  <rect x="900" y="308" width="200" height="120" rx="12" fill="#ffffff" fill-opacity="0.05" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+  <rect x="916" y="324" width="85" height="10" rx="3" fill="#f8fafc" fill-opacity="0.6"/>
+  <rect x="916" y="342" width="55" height="8" rx="2" fill="#94a3b8" fill-opacity="0.4"/>
+  <polyline points="916,392 932,388 948,394 964,382 980,378 996,386 1012,374 1028,368 1044,376 1060,364 1076,360 1084,356" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="916" y="406" width="36" height="14" rx="4" fill="#ef4444" fill-opacity="0.15"/>
+  <rect x="958" y="406" width="36" height="14" rx="4" fill="#ffffff" fill-opacity="0.05"/>
+
+  <!-- "+8 more" indicator -->
+  <rect x="680" y="444" width="420" height="36" rx="8" fill="#ffffff" fill-opacity="0.03"/>
+  <text x="890" y="468" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#64748b" text-anchor="middle">+ 8 more properties</text>
+
+  <!-- Bottom bar -->
+  <text x="80" y="580" font-family="system-ui, -apple-system, sans-serif" font-size="15" fill="#64748b">statpilot.app</text>
+</svg>

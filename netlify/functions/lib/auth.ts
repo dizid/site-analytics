@@ -1,13 +1,12 @@
 /**
  * Shared auth utilities for Netlify Functions.
- * Single source of truth for password validation and Google Auth token generation.
+ * JWT-based session validation. Password auth and service account have been removed.
  */
 
 // Load .env for local dev — no-op when env vars are set in production (Netlify dashboard)
 import 'dotenv/config'
 
-import { timingSafeEqual } from 'node:crypto'
-import { GoogleAuth } from 'google-auth-library'
+import { verifySessionJwt, type JwtPayload } from './jwt.js'
 
 // Response headers — no CORS needed (same-origin on Netlify)
 export const JSON_HEADERS: Record<string, string> = {
@@ -15,86 +14,65 @@ export const JSON_HEADERS: Record<string, string> = {
 }
 
 // ---------------------------------------------------------------------------
-// Constant-time string comparison
+// Session validation
 // ---------------------------------------------------------------------------
 
 /**
- * Compare two strings in constant time to prevent timing attacks.
- * Uses crypto.timingSafeEqual under the hood.
+ * Reads the `Authorization: Bearer <token>` header, verifies the JWT signature
+ * and expiry, and returns the typed payload.
+ *
+ * Returns a ready-to-send 401 Response if the token is missing or invalid —
+ * callers should do: `if (session instanceof Response) return session`
  */
-export function constantTimeCompare(a: string, b: string): boolean {
-  const bufA = Buffer.from(a)
-  const bufB = Buffer.from(b)
-
-  if (bufA.length !== bufB.length) {
-    // Burn equivalent CPU time so the length difference isn't observable
-    timingSafeEqual(bufA, bufA)
-    return false
-  }
-
-  return timingSafeEqual(bufA, bufB)
-}
-
-// ---------------------------------------------------------------------------
-// Dashboard password validation
-// ---------------------------------------------------------------------------
-
-/**
- * Validates the x-dashboard-password header against DASHBOARD_PASSWORD env var.
- * Returns null on success, or a Response to send immediately on failure.
- */
-export function validateAuth(request: Request): Response | null {
-  const dashboardPassword = process.env.DASHBOARD_PASSWORD
-  if (!dashboardPassword) {
-    console.error('DASHBOARD_PASSWORD environment variable is not configured')
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: JSON_HEADERS }
-    )
-  }
-
-  const provided = request.headers.get('x-dashboard-password')
-  if (!provided || !constantTimeCompare(provided, dashboardPassword)) {
+export async function validateSession(request: Request): Promise<JwtPayload | Response> {
+  const authHeader = request.headers.get('Authorization')
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
       { status: 401, headers: JSON_HEADERS }
     )
   }
 
-  return null
+  const token = authHeader.slice('Bearer '.length).trim()
+  if (!token) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: JSON_HEADERS }
+    )
+  }
+
+  try {
+    const payload = await verifySessionJwt(token)
+    return payload
+  } catch (err) {
+    // Token is expired, tampered, or otherwise invalid
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: JSON_HEADERS }
+    )
+  }
 }
 
 // ---------------------------------------------------------------------------
-// Google Auth token
+// Email allowlist
 // ---------------------------------------------------------------------------
 
 /**
- * Builds a GoogleAuth client from service account env vars and returns a
- * Bearer token scoped for GA4 readonly access.
+ * Checks whether the given email is allowed to access the dashboard.
+ * If the `ALLOWED_EMAILS` env var is empty or unset, all authenticated users
+ * are allowed (useful for a personal dashboard).
  */
-export async function getAccessToken(): Promise<string> {
-  const clientEmail = process.env.GA_CLIENT_EMAIL
-  const privateKey = process.env.GA_PRIVATE_KEY
-
-  if (!clientEmail || !privateKey) {
-    throw new Error('Missing GA service account credentials')
+export function checkAllowedEmail(email: string): boolean {
+  const allowedEnv = process.env.ALLOWED_EMAILS ?? ''
+  if (!allowedEnv.trim()) {
+    // No allowlist configured — allow all authenticated users
+    return true
   }
 
-  const auth = new GoogleAuth({
-    credentials: {
-      client_email: clientEmail,
-      // Env vars store \n as literal backslash-n — convert to real newlines
-      private_key: privateKey.replace(/\\n/g, '\n'),
-    },
-    scopes: ['https://www.googleapis.com/auth/analytics.readonly'],
-  })
+  const allowedList = allowedEnv
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
 
-  const client = await auth.getClient()
-  const tokenResponse = await client.getAccessToken()
-
-  if (!tokenResponse.token) {
-    throw new Error('Failed to obtain access token from Google Auth')
-  }
-
-  return tokenResponse.token
+  return allowedList.includes(email.toLowerCase())
 }
