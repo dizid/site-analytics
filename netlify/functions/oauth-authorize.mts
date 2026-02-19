@@ -19,7 +19,7 @@ export default async (request: Request, _context: Context): Promise<Response> =>
   }
 
   const clientId = process.env.GOOGLE_CLIENT_ID
-  const siteUrl  = process.env.SITE_URL
+  const siteUrl  = process.env.SITE_URL?.replace(/\/+$/, '')
 
   if (!clientId || !siteUrl) {
     console.error('GOOGLE_CLIENT_ID or SITE_URL environment variable is not configured')

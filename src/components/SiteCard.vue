@@ -44,9 +44,22 @@ const hasError = computed(() => Boolean(props.property.error))
         : 'hover:bg-white/[0.08] hover:border-white/20',
     ]"
   >
-    <!-- Property name header -->
+    <!-- Property name header — clickable link if website URL available -->
     <h2 class="text-sm font-semibold text-text-primary truncate mb-3">
-      {{ property.displayName }}
+      <a
+        v-if="property.websiteUrl"
+        :href="property.websiteUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="hover:text-accent transition-colors"
+        :title="property.websiteUrl"
+      >
+        {{ property.displayName }}
+        <svg class="inline w-3 h-3 ml-0.5 opacity-40" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <path d="M3.5 1.5H10.5V8.5M10.5 1.5L1.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </a>
+      <span v-else>{{ property.displayName }}</span>
     </h2>
 
     <!-- Error state: no metric data available -->

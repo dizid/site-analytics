@@ -35,6 +35,11 @@
   status = 200
 
 [[redirects]]
+  from = "/blog"
+  to = "/blog/index.html"
+  status = 200
+
+[[redirects]]
   from = "/privacy"
   to = "/privacy.html"
   status = 200

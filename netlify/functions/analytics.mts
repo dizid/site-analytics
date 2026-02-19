@@ -29,7 +29,21 @@ const DATA_API_BASE = 'https://analyticsdata.googleapis.com/v1beta/properties'
 const ADMIN_API_BASE = 'https://analyticsadmin.googleapis.com/v1beta'
 
 // Maximum properties per batch to stay within GA4 rate limits
-const BATCH_SIZE = 10
+const BATCH_SIZE = 3
+
+// ---------------------------------------------------------------------------
+// Google API error parsing
+// ---------------------------------------------------------------------------
+
+/** Extracts a human-readable error message from Google's JSON error response body. */
+function parseGoogleApiError(body: string, status: number): string {
+  try {
+    const err = JSON.parse(body)
+    const message = err.error?.message || err.error?.status
+    if (message) return message
+  } catch { /* body wasn't JSON */ }
+  return `GA4 API request failed (status ${status})`
+}
 
 // ---------------------------------------------------------------------------
 // Date range helpers
@@ -122,6 +136,49 @@ async function discoverProperties(token: string): Promise<DiscoveredProperty[]> 
 }
 
 // ---------------------------------------------------------------------------
+// GA4 Admin API — website URL from data streams
+// ---------------------------------------------------------------------------
+
+interface DataStream {
+  name: string
+  type: 'WEB_DATA_STREAM' | 'ANDROID_APP_DATA_STREAM' | 'IOS_APP_DATA_STREAM'
+  webStreamData?: {
+    defaultUri: string
+    measurementId: string
+  }
+}
+
+interface DataStreamsResponse {
+  dataStreams?: DataStream[]
+}
+
+/**
+ * Fetches the website URL for a property by finding its first WEB_DATA_STREAM.
+ * Returns undefined for app-only properties or on any error — never throws.
+ */
+async function fetchWebsiteUrl(
+  propertyId: string,
+  token: string
+): Promise<string | undefined> {
+  try {
+    const id = propertyId.replace(/^properties\//, '')
+    const url = `${ADMIN_API_BASE}/properties/${id}/dataStreams`
+
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    if (!response.ok) return undefined
+
+    const data = await response.json() as DataStreamsResponse
+    const webStream = data.dataStreams?.find(s => s.type === 'WEB_DATA_STREAM')
+    return webStream?.webStreamData?.defaultUri
+  } catch {
+    return undefined
+  }
+}
+
+// ---------------------------------------------------------------------------
 // GA4 response parsing types
 // ---------------------------------------------------------------------------
 
@@ -182,7 +239,7 @@ async function fetchMetricsReport(
   if (!response.ok) {
     const body = await response.text()
     console.error(`Metrics report failed for ${id} (${response.status}): ${body}`)
-    throw new Error(`GA4 API request failed (status ${response.status})`)
+    throw new Error(parseGoogleApiError(body, response.status))
   }
 
   return response.json()
@@ -215,7 +272,7 @@ async function fetchSourcesReport(
   if (!response.ok) {
     const body = await response.text()
     console.error(`Sources report failed for ${id} (${response.status}): ${body}`)
-    throw new Error(`GA4 API request failed (status ${response.status})`)
+    throw new Error(parseGoogleApiError(body, response.status))
   }
 
   return response.json()
@@ -303,14 +360,16 @@ async function fetchProperty(
   token: string
 ): Promise<PropertyResult> {
   try {
-    const [metricsData, sourcesData] = await Promise.all([
+    const [metricsData, sourcesData, websiteUrl] = await Promise.all([
       fetchMetricsReport(propertyId, dateRange, token),
       fetchSourcesReport(propertyId, dateRange, token),
+      fetchWebsiteUrl(propertyId, token),
     ])
 
     return {
       propertyId,
       displayName,
+      websiteUrl,
       metrics: parseMetricsReport(metricsData),
       sources: parseSourcesReport(sourcesData),
       error:   null,
@@ -363,9 +422,10 @@ export default async (request: Request, _context: Context): Promise<Response> =>
     try {
       token = await getValidAccessToken(session.sub)
     } catch (err) {
+      const detail = err instanceof Error ? err.message : 'Unknown error'
       console.error(`Failed to get valid access token for user ${session.sub}:`, err)
       return new Response(
-        JSON.stringify({ error: 'Session expired — please sign in again' }),
+        JSON.stringify({ error: `Session expired — please sign in again (${detail})` }),
         { status: 401, headers: JSON_HEADERS }
       )
     }
@@ -375,9 +435,10 @@ export default async (request: Request, _context: Context): Promise<Response> =>
     try {
       properties = await discoverProperties(token)
     } catch (err) {
+      const detail = err instanceof Error ? err.message : 'Unknown error'
       console.error('Property discovery failed:', err)
       return new Response(
-        JSON.stringify({ error: 'Failed to discover GA4 properties' }),
+        JSON.stringify({ error: `Failed to discover GA4 properties: ${detail}` }),
         { status: 502, headers: JSON_HEADERS }
       )
     }
@@ -425,6 +486,36 @@ export default async (request: Request, _context: Context): Promise<Response> =>
               ? result.reason.message
               : 'Unexpected error',
           })
+        }
+      }
+    }
+
+    // Retry failed properties once after a short delay (handles transient rate-limit rejections).
+    // Skip permanent errors — permission issues (UNAUTHENTICATED, PERMISSION_DENIED) won't resolve on retry.
+    const permanentErrors = ['UNAUTHENTICATED', 'PERMISSION_DENIED', 'insufficient permissions']
+    const failedIndices = results
+      .map((r, i) => {
+        if (!r.error) return -1
+        if (permanentErrors.some(pe => r.error!.toLowerCase().includes(pe.toLowerCase()))) return -1
+        return i
+      })
+      .filter(i => i !== -1)
+
+    if (failedIndices.length > 0) {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
+      for (let i = 0; i < failedIndices.length; i += BATCH_SIZE) {
+        const retryBatch = failedIndices.slice(i, i + BATCH_SIZE)
+        const retryResults = await Promise.allSettled(
+          retryBatch.map(idx => {
+            const { propertyId, displayName } = properties[idx]
+            return fetchProperty(propertyId, displayName, dateRange, token)
+          })
+        )
+        for (const [j, result] of retryResults.entries()) {
+          if (result.status === 'fulfilled' && result.value.error === null) {
+            results[retryBatch[j]] = result.value
+          }
         }
       }
     }

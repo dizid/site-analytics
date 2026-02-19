@@ -30,6 +30,7 @@ export interface PropertyMetrics {
 export interface PropertyResult {
   propertyId: string
   displayName: string
+  websiteUrl?: string
   metrics: PropertyMetrics | null
   sources: TrafficSource[]
   error: string | null

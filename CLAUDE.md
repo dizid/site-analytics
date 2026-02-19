@@ -119,8 +119,17 @@ ALLOWED_EMAILS        # Comma-separated email allowlist (empty = allow all authe
 
 ## GCP Setup
 
-- Project: `fluid-b6251`
+- Project: `fluid-b6251` (project number: `215702319746`)
 - OAuth consent screen: External, Testing mode
 - Required APIs: Google Analytics Data API, Google Analytics Admin API
 - OAuth scopes: openid, email, profile, analytics.readonly
-- Redirect URIs: `{SITE_URL}/api/oauth/callback`
+- Authorized redirect URIs:
+  - `https://statpilot.mom/api/oauth/callback`
+  - `http://localhost:5173/api/oauth/callback`
+
+## Deployment
+
+- Production URL: `https://statpilot.mom`
+- Netlify site: `ga-analytics-app` (ID: `2290a935-eef6-4cee-8611-eaed351f9ffa`)
+- GitHub repo: `https://github.com/dizid/site-analytics.git`
+- Local dev port: `5173` (Vite default)

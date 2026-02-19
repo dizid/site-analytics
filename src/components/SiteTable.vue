@@ -132,7 +132,14 @@ function ariaSort(column: SortColumn): 'ascending' | 'descending' | 'none' {
             <!-- Error row: spans all metric columns -->
             <template v-if="property.error || !property.metrics">
               <td class="px-4 py-3 font-medium text-text-primary whitespace-nowrap">
-                {{ property.displayName }}
+                <a
+                  v-if="property.websiteUrl"
+                  :href="property.websiteUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="hover:text-accent transition-colors"
+                >{{ property.displayName }}</a>
+                <span v-else>{{ property.displayName }}</span>
               </td>
               <td :colspan="columns.length" class="px-4 py-3 text-xs text-danger">
                 {{ property.error ?? 'Failed to load metrics' }}
@@ -142,7 +149,14 @@ function ariaSort(column: SortColumn): 'ascending' | 'descending' | 'none' {
             <!-- Normal data row -->
             <template v-else>
               <td class="px-4 py-3 font-medium text-text-primary whitespace-nowrap">
-                {{ property.displayName }}
+                <a
+                  v-if="property.websiteUrl"
+                  :href="property.websiteUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="hover:text-accent transition-colors"
+                >{{ property.displayName }}</a>
+                <span v-else>{{ property.displayName }}</span>
               </td>
               <td class="px-4 py-3 text-right text-text-primary tabular-nums">
                 {{ formatNumber(property.metrics.sessions) }}
