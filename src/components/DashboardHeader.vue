@@ -108,7 +108,7 @@ const selectedRange = computed<DateRange>({
 
 <template>
   <!-- Sticky top bar -->
-  <header class="sticky top-0 z-20 bg-surface/80 backdrop-blur-xl px-5 pb-4 pt-4">
+  <header class="sticky top-0 z-20 bg-surface-elevated border-b border-border shadow-[0_1px_3px_rgba(0,0,0,0.4)] px-5 py-3">
     <div class="flex items-center justify-between">
 
       <!-- Left: home icon + title + subtitle -->
@@ -117,7 +117,7 @@ const selectedRange = computed<DateRange>({
         <button
           v-if="showHome"
           type="button"
-          class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-card text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+          class="w-10 h-10 flex items-center justify-center rounded-lg bg-surface-card text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
           aria-label="Back to overview"
           @click="emit('home')"
         >
@@ -151,7 +151,7 @@ const selectedRange = computed<DateRange>({
         <button
           v-if="!showHome"
           type="button"
-          class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-card text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+          class="w-10 h-10 flex items-center justify-center rounded-lg bg-surface-card text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
           :aria-label="viewMode === 'cards' ? 'Switch to table view' : 'Switch to card view'"
           @click="emit('toggleView')"
         >
@@ -185,7 +185,7 @@ const selectedRange = computed<DateRange>({
         <button
           type="button"
           :disabled="isLoading"
-          class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-card text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          class="w-10 h-10 flex items-center justify-center rounded-lg bg-surface-card text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           aria-label="Refresh data"
           @click="emit('refresh')"
         >
@@ -241,7 +241,7 @@ const selectedRange = computed<DateRange>({
           <button
             v-else
             type="button"
-            class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-card text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+            class="w-10 h-10 flex items-center justify-center rounded-lg bg-surface-card text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
             @click="emit('logout')"
           >
             <svg class="w-[18px] h-[18px]" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -254,7 +254,7 @@ const selectedRange = computed<DateRange>({
           <Teleport to="body">
             <div v-if="showUserMenu && user" class="fixed inset-0 z-50" @click="showUserMenu = false">
               <div
-                class="fixed top-16 right-4 w-64 bg-surface-card border border-border rounded-xl shadow-xl p-4 z-50"
+                class="fixed top-14 right-4 w-64 bg-surface-elevated border border-border rounded-xl shadow-xl p-4 z-50"
                 @click.stop
               >
                 <!-- User info -->

@@ -16,7 +16,7 @@ const emit = defineEmits<{
 
 <template>
   <div
-    class="bg-danger/10 border border-danger/20 rounded-2xl px-4 py-3 flex items-start gap-3"
+    class="bg-surface-card border border-border border-l-4 border-l-danger rounded-xl px-4 py-3 flex items-start gap-3"
     role="alert"
   >
     <!-- Error icon -->

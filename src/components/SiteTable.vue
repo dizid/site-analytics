@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * SiteTable.vue
- * Compact row-card list view for all GA4 properties.
+ * Cohesive table-style list view for all GA4 properties.
  * Sort props/emits retained for composable compatibility (sorting handled externally).
  */
 
@@ -27,14 +27,14 @@ function getTrendData(property: PropertyResult): number[] {
 </script>
 
 <template>
-  <div class="space-y-2">
+  <div class="bg-surface-card rounded-xl border border-border overflow-hidden">
     <div
       v-for="property in properties"
       :key="property.propertyId"
       :class="[
-        'flex items-center justify-between bg-surface-card rounded-xl p-4 border border-border transition-colors',
+        'flex items-center justify-between py-3 px-4 border-b border-border last:border-b-0 transition-colors',
         property.metrics
-          ? 'hover:bg-surface-card-hover hover:border-border-hover cursor-pointer'
+          ? 'hover:bg-white/[0.02] cursor-pointer'
           : 'opacity-60',
       ]"
       @click="property.metrics && emit('select', property)"
@@ -63,12 +63,16 @@ function getTrendData(property: PropertyResult): number[] {
       <!-- Metrics + sparkline -->
       <template v-else>
         <div class="flex items-center gap-4 shrink-0 ml-3">
+          <div class="text-right hidden sm:block">
+            <p class="text-sm font-bold tabular-nums">{{ formatNumber(property.metrics.activeUsers) }}</p>
+            <p class="text-[10px] text-text-muted">users</p>
+          </div>
           <div class="text-right">
-            <p class="text-sm font-bold">{{ formatNumber(property.metrics.sessions) }}</p>
+            <p class="text-sm font-bold tabular-nums">{{ formatNumber(property.metrics.sessions) }}</p>
             <p class="text-[10px] text-text-muted">sessions</p>
           </div>
           <div class="w-12 h-6">
-            <Sparkline :data="getTrendData(property)" color="#137fec" :width="48" :height="24" />
+            <Sparkline :data="getTrendData(property)" color="#2d8cf0" :width="48" :height="24" />
           </div>
         </div>
       </template>

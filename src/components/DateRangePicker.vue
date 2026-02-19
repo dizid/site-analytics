@@ -30,7 +30,7 @@ function select(range: DateRange): void {
 </script>
 
 <template>
-  <div class="flex gap-1 bg-surface-card p-1 rounded-xl" role="group" aria-label="Date range">
+  <div class="flex gap-1 bg-surface-card/60 border border-border p-1 rounded-xl" role="group" aria-label="Date range">
     <button
       v-for="option in options"
       :key="option.value"
@@ -38,8 +38,8 @@ function select(range: DateRange): void {
       :class="[
         'flex-1 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer',
         modelValue === option.value
-          ? 'bg-surface-card-hover text-text-primary shadow-sm'
-          : 'text-text-secondary hover:text-text-primary',
+          ? 'bg-accent text-white shadow-sm'
+          : 'text-text-muted hover:text-text-secondary',
       ]"
       :aria-pressed="modelValue === option.value"
       @click="select(option.value)"

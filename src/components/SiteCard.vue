@@ -59,14 +59,15 @@ const hasError = computed(() => Boolean(props.property.error))
 </script>
 
 <template>
-  <!-- Solid dark card -->
+  <!-- Solid dark card with colored top accent -->
   <div
     :class="[
-      'bg-surface-card p-5 rounded-2xl shadow-sm border border-border transition-colors',
+      'bg-surface-card p-4 rounded-2xl shadow-sm border border-border border-t-2 transition-all duration-200',
       hasError
         ? 'opacity-60'
-        : 'hover:bg-surface-card-hover hover:border-border-hover cursor-pointer',
+        : 'hover:bg-surface-card-hover hover:border-border-hover hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
     ]"
+    :style="{ borderTopColor: iconStyle.color }"
     @click="property.metrics && emit('select', property)"
   >
     <!-- Top: icon + name + sparkline -->
@@ -82,7 +83,7 @@ const hasError = computed(() => Boolean(props.property.error))
           </svg>
         </div>
         <div class="min-w-0">
-          <h2 class="font-bold text-[15px] leading-tight truncate">{{ property.displayName }}</h2>
+          <h2 class="font-bold text-sm leading-tight truncate">{{ property.displayName }}</h2>
           <p class="text-[11px] text-text-muted uppercase font-bold tracking-wider truncate">
             {{ property.websiteUrl || property.propertyId }}
           </p>
@@ -101,26 +102,26 @@ const hasError = computed(() => Boolean(props.property.error))
     <template v-else>
       <!-- Sparkline — full width, prominent -->
       <div class="h-10 w-full mb-4">
-        <Sparkline :data="trendData" color="#137fec" />
+        <Sparkline :data="trendData" color="#2d8cf0" />
       </div>
 
       <!-- 2x2 metrics grid -->
-      <div class="grid grid-cols-2 gap-3">
-        <div class="bg-white/[0.03] p-3 rounded-xl">
-          <p class="text-[10px] text-text-secondary font-bold uppercase mb-1">Users</p>
-          <span class="text-lg font-bold">{{ formatNumber(property.metrics.activeUsers) }}</span>
+      <div class="grid grid-cols-2 gap-2">
+        <div class="bg-white/[0.03] p-2.5 rounded-lg">
+          <p class="text-[10px] text-text-muted font-semibold uppercase mb-0.5">Users</p>
+          <span class="text-base font-bold tabular-nums">{{ formatNumber(property.metrics.activeUsers) }}</span>
         </div>
-        <div class="bg-white/[0.03] p-3 rounded-xl">
-          <p class="text-[10px] text-text-secondary font-bold uppercase mb-1">Sessions</p>
-          <span class="text-lg font-bold">{{ formatNumber(property.metrics.sessions) }}</span>
+        <div class="bg-white/[0.03] p-2.5 rounded-lg">
+          <p class="text-[10px] text-text-muted font-semibold uppercase mb-0.5">Sessions</p>
+          <span class="text-base font-bold tabular-nums">{{ formatNumber(property.metrics.sessions) }}</span>
         </div>
-        <div class="bg-white/[0.03] p-3 rounded-xl">
-          <p class="text-[10px] text-text-secondary font-bold uppercase mb-1">Bounce Rate</p>
-          <span class="text-lg font-bold">{{ formatBounceRate(property.metrics.bounceRate) }}</span>
+        <div class="bg-white/[0.03] p-2.5 rounded-lg">
+          <p class="text-[10px] text-text-muted font-semibold uppercase mb-0.5">Bounce Rate</p>
+          <span class="text-base font-bold tabular-nums">{{ formatBounceRate(property.metrics.bounceRate) }}</span>
         </div>
-        <div class="bg-white/[0.03] p-3 rounded-xl">
-          <p class="text-[10px] text-text-secondary font-bold uppercase mb-1">Avg Duration</p>
-          <span class="text-lg font-bold">{{ formatDuration(property.metrics.averageSessionDuration) }}</span>
+        <div class="bg-white/[0.03] p-2.5 rounded-lg">
+          <p class="text-[10px] text-text-muted font-semibold uppercase mb-0.5">Avg Duration</p>
+          <span class="text-base font-bold tabular-nums">{{ formatDuration(property.metrics.averageSessionDuration) }}</span>
         </div>
       </div>
     </template>

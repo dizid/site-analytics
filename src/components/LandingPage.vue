@@ -95,7 +95,7 @@ const plans = [
       >
         <div
           class="h-[600px] w-[600px] rounded-full opacity-20"
-          style="background: radial-gradient(circle, #137fec 0%, transparent 70%)"
+          style="background: radial-gradient(circle, #2d8cf0 0%, transparent 70%)"
         />
       </div>
 
@@ -129,7 +129,7 @@ const plans = [
         <!-- OAuth error — shown when returning from a failed auth attempt -->
         <div
           v-if="error"
-          class="mx-auto mb-6 max-w-sm rounded-lg border border-danger/20 bg-danger/10 p-3 text-sm text-danger"
+          class="mx-auto mb-6 max-w-sm rounded-lg border border-border border-l-4 border-l-danger bg-surface-card p-3 text-sm text-danger"
           role="alert"
           aria-live="assertive"
         >
@@ -193,7 +193,7 @@ const plans = [
           <div
             v-for="feature in features"
             :key="feature.title"
-            class="rounded-2xl border border-white/10 bg-white/5 p-7 backdrop-blur-sm"
+            class="rounded-2xl border border-border bg-surface-card p-7"
           >
             <h3 class="mb-3 text-base font-semibold text-text-primary">
               {{ feature.title }}
@@ -223,10 +223,10 @@ const plans = [
         </div>
 
         <!-- Scrollable on mobile -->
-        <div class="overflow-x-auto rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm">
+        <div class="overflow-x-auto rounded-2xl border border-border bg-surface-card">
           <table class="w-full min-w-[540px] border-collapse text-sm">
             <thead>
-              <tr class="border-b border-white/10">
+              <tr class="border-b border-border">
                 <th class="px-5 py-4 text-left font-medium text-text-muted" scope="col">Feature</th>
                 <th
                   v-for="col in competitors"
@@ -241,7 +241,7 @@ const plans = [
             </thead>
             <tbody>
               <!-- Price row -->
-              <tr class="border-b border-white/5">
+              <tr class="border-b border-border">
                 <td class="px-5 py-3.5 text-text-muted">Price (10 sites)</td>
                 <td
                   v-for="col in competitors"
@@ -253,7 +253,7 @@ const plans = [
                 </td>
               </tr>
               <!-- Setup time row -->
-              <tr class="border-b border-white/5">
+              <tr class="border-b border-border">
                 <td class="px-5 py-3.5 text-text-muted">Setup time</td>
                 <td
                   v-for="col in competitors"
@@ -265,7 +265,7 @@ const plans = [
                 </td>
               </tr>
               <!-- Auto-discovers row -->
-              <tr class="border-b border-white/5">
+              <tr class="border-b border-border">
                 <td class="px-5 py-3.5 text-text-muted">Auto-discovers properties</td>
                 <td
                   v-for="col in competitors"
@@ -331,10 +331,10 @@ const plans = [
           <div
             v-for="plan in plans"
             :key="plan.name"
-            class="relative flex flex-col rounded-2xl border p-7 backdrop-blur-sm"
+            class="relative flex flex-col rounded-2xl border p-7"
             :class="plan.highlighted
               ? 'border-accent/50 bg-accent/10 ring-1 ring-accent/30'
-              : 'border-white/10 bg-white/5'"
+              : 'border-border bg-surface-card'"
           >
 
             <!-- Badge -->
@@ -391,7 +391,7 @@ const plans = [
               class="w-full rounded-xl py-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface cursor-pointer"
               :class="plan.highlighted
                 ? 'bg-accent text-white hover:bg-accent-hover'
-                : 'border border-white/15 bg-white/5 text-text-primary hover:bg-white/10'"
+                : 'border border-border bg-surface-card text-text-primary hover:bg-surface-card-hover'"
               :aria-label="`${plan.cta} — ${plan.name} plan`"
               @click="login"
             >
@@ -407,7 +407,7 @@ const plans = [
     <!-- =====================================================================
          FOOTER
          ===================================================================== -->
-    <footer class="border-t border-white/10 px-4 py-8">
+    <footer class="border-t border-border px-4 py-8">
       <div class="mx-auto flex max-w-6xl flex-col items-center gap-3 text-center sm:flex-row sm:justify-between sm:text-left">
 
         <p class="text-xs text-text-muted">

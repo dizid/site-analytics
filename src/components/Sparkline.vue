@@ -15,7 +15,7 @@ const props = withDefaults(
     height?: number
   }>(),
   {
-    color: '#137fec',
+    color: '#2d8cf0',
     width: 120,
     height: 32,
   }
@@ -115,13 +115,13 @@ const geometry = computed(() => {
       <polygon
         :points="geometry.areaPoints"
         :fill="color"
-        fill-opacity="0.15"
+        fill-opacity="0.08"
       />
       <!-- The trend line itself -->
       <polyline
         :points="geometry.points"
         :stroke="color"
-        stroke-width="1.5"
+        stroke-width="2"
         fill="none"
         stroke-linecap="round"
         stroke-linejoin="round"

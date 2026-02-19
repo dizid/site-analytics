@@ -104,7 +104,7 @@ watch(isAuthenticated, (auth) => {
         />
 
         <!-- Loading skeletons -->
-        <div v-if="isLoading && sortedProperties.length === 0" class="space-y-4">
+        <div v-if="isLoading && sortedProperties.length === 0" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <LoadingSkeleton v-for="i in 6" :key="i" />
         </div>
 
