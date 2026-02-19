@@ -7,7 +7,7 @@
 
 import { computed } from 'vue'
 import type { PropertyResult } from '../types/analytics'
-import { formatNumber } from '../lib/formatters'
+import { formatNumber, formatBounceRate, formatDuration } from '../lib/formatters'
 import Sparkline from './Sparkline.vue'
 
 const props = defineProps<{
@@ -88,10 +88,6 @@ const hasError = computed(() => Boolean(props.property.error))
           </p>
         </div>
       </div>
-      <!-- Mini sparkline (top-right) -->
-      <div v-if="!hasError && property.metrics" class="w-12 h-6 shrink-0 ml-3">
-        <Sparkline :data="trendData" color="#137fec" :width="48" :height="24" />
-      </div>
     </div>
 
     <!-- Error state -->
@@ -101,16 +97,30 @@ const hasError = computed(() => Boolean(props.property.error))
       </p>
     </template>
 
-    <!-- Bottom: 2-col metrics -->
+    <!-- Sparkline + 4-metric grid -->
     <template v-else>
-      <div class="grid grid-cols-2 gap-4">
+      <!-- Sparkline — full width, prominent -->
+      <div class="h-10 w-full mb-4">
+        <Sparkline :data="trendData" color="#137fec" />
+      </div>
+
+      <!-- 2x2 metrics grid -->
+      <div class="grid grid-cols-2 gap-3">
         <div class="bg-white/[0.03] p-3 rounded-xl">
-          <p class="text-[10px] text-text-secondary font-bold uppercase mb-1">Total Users</p>
+          <p class="text-[10px] text-text-secondary font-bold uppercase mb-1">Users</p>
           <span class="text-lg font-bold">{{ formatNumber(property.metrics.activeUsers) }}</span>
         </div>
         <div class="bg-white/[0.03] p-3 rounded-xl">
           <p class="text-[10px] text-text-secondary font-bold uppercase mb-1">Sessions</p>
           <span class="text-lg font-bold">{{ formatNumber(property.metrics.sessions) }}</span>
+        </div>
+        <div class="bg-white/[0.03] p-3 rounded-xl">
+          <p class="text-[10px] text-text-secondary font-bold uppercase mb-1">Bounce Rate</p>
+          <span class="text-lg font-bold">{{ formatBounceRate(property.metrics.bounceRate) }}</span>
+        </div>
+        <div class="bg-white/[0.03] p-3 rounded-xl">
+          <p class="text-[10px] text-text-secondary font-bold uppercase mb-1">Avg Duration</p>
+          <span class="text-lg font-bold">{{ formatDuration(property.metrics.averageSessionDuration) }}</span>
         </div>
       </div>
     </template>

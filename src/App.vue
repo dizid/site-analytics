@@ -66,9 +66,11 @@ watch(isAuthenticated, (auth) => {
       :is-loading="isLoading"
       :user="user"
       :success-count="successCount"
+      :show-home="!!selectedProperty"
       @refresh="refresh"
       @toggle-view="setViewMode(viewMode === 'cards' ? 'table' : 'cards')"
       @logout="logout"
+      @home="deselectProperty"
     />
 
     <main class="mx-auto max-w-7xl px-5 py-6 sm:px-6">
@@ -107,7 +109,7 @@ watch(isAuthenticated, (auth) => {
         </div>
 
         <!-- Card view -->
-        <div v-else-if="viewMode === 'cards'" class="space-y-4">
+        <div v-else-if="viewMode === 'cards'" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <SiteCard
             v-for="(property, i) in sortedProperties"
             :key="property.propertyId"

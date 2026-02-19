@@ -75,18 +75,25 @@ function getDevicePercentage(sessions: number): number {
         </button>
 
         <div class="min-w-0">
-          <h2 class="text-lg font-semibold text-white/90 truncate">
-            {{ property.displayName }}
-          </h2>
           <a
             v-if="property.websiteUrl"
             :href="property.websiteUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="text-xs text-white/40 hover:text-white/60 transition-colors truncate block"
+            class="text-lg font-semibold text-white/90 hover:text-white transition-colors truncate flex items-center gap-1.5 group"
           >
-            {{ property.websiteUrl }}
+            {{ property.displayName }}
+            <svg class="w-3.5 h-3.5 text-white/30 group-hover:text-white/60 flex-shrink-0 transition-colors" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M6 3.5h-2.5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              <path d="M10 2.5h3.5v3.5M14 2l-5.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
           </a>
+          <h2
+            v-else
+            class="text-lg font-semibold text-white/90 truncate"
+          >
+            {{ property.displayName }}
+          </h2>
         </div>
       </div>
     </div>
@@ -106,17 +113,18 @@ function getDevicePercentage(sessions: number): number {
 
         <!-- Sparkline: sessions trend -->
         <div class="h-10 w-full mb-3">
-          <Sparkline :data="trendData" color="#6366f1" />
+          <Sparkline :data="trendData" color="#137fec" />
         </div>
 
         <!-- Traffic source badges -->
-        <div v-if="topSources.length > 0" class="flex flex-wrap gap-1.5">
+        <div v-if="topSources.length > 0" class="flex flex-wrap gap-2">
           <span
             v-for="source in topSources"
             :key="source.channel"
-            class="bg-white/5 rounded-full px-2 py-0.5 text-xs text-text-secondary truncate max-w-[120px]"
+            class="bg-white/8 border border-white/10 rounded-full px-2.5 py-0.5 text-xs text-white/80 truncate max-w-[160px]"
           >
             {{ source.channel }}
+            <span class="text-white/40 tabular-nums ml-1">{{ formatNumber(source.sessions) }}</span>
           </span>
         </div>
       </div>

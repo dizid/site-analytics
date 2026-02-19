@@ -30,7 +30,7 @@ function select(range: DateRange): void {
 </script>
 
 <template>
-  <div class="flex bg-surface-card p-1 rounded-xl" role="group" aria-label="Date range">
+  <div class="flex gap-1 bg-surface-card p-1 rounded-xl" role="group" aria-label="Date range">
     <button
       v-for="option in options"
       :key="option.value"

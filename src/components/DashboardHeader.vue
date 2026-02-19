@@ -18,12 +18,15 @@ const props = defineProps<{
   user: UserInfo | null
   /** Number of successfully loaded properties */
   successCount?: number
+  /** True when detail view is active — shows home icon, hides view toggle */
+  showHome?: boolean
 }>()
 
 const emit = defineEmits<{
   refresh: []
   toggleView: []
   logout: []
+  home: []
 }>()
 
 const { dateRange, setDateRange } = useDateRange()
@@ -77,9 +80,19 @@ const avatarFallback = computed<string>(() => {
 })
 
 const avatarError = ref(false)
+const showUserMenu = ref(false)
 
 function onAvatarError(): void {
   avatarError.value = true
+}
+
+function toggleUserMenu(): void {
+  showUserMenu.value = !showUserMenu.value
+}
+
+function handleLogout(): void {
+  showUserMenu.value = false
+  emit('logout')
 }
 
 // ---------------------------------------------------------------------------
@@ -98,8 +111,22 @@ const selectedRange = computed<DateRange>({
   <header class="sticky top-0 z-20 bg-surface/80 backdrop-blur-xl px-5 pb-4 pt-4">
     <div class="flex items-center justify-between">
 
-      <!-- Left: title + subtitle -->
-      <div>
+      <!-- Left: home icon + title + subtitle -->
+      <div class="flex items-center gap-3">
+        <!-- Home button — visible in detail view -->
+        <button
+          v-if="showHome"
+          type="button"
+          class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-card text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+          aria-label="Back to overview"
+          @click="emit('home')"
+        >
+          <svg class="w-[18px] h-[18px]" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M3 10.5L10 4l7 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M5 9v7a1 1 0 001 1h3v-4h2v4h3a1 1 0 001-1V9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+        <div>
         <h1 class="text-2xl font-bold tracking-tight">
           Properties
         </h1>
@@ -114,13 +141,15 @@ const selectedRange = computed<DateRange>({
             No sites connected
           </template>
         </p>
+        </div>
       </div>
 
       <!-- Right: controls -->
       <div class="flex items-center gap-3">
 
-        <!-- View toggle: cards <-> table -->
+        <!-- View toggle: cards <-> table (hidden in detail view) -->
         <button
+          v-if="!showHome"
           type="button"
           class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-card text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
           :aria-label="viewMode === 'cards' ? 'Switch to table view' : 'Switch to card view'"
@@ -182,44 +211,82 @@ const selectedRange = computed<DateRange>({
           </svg>
         </button>
 
-        <!-- User avatar + logout -->
-        <button
-          v-if="user"
-          type="button"
-          class="w-10 h-10 rounded-full overflow-hidden cursor-pointer"
-          :title="`Signed in as ${user.email} — click to sign out`"
-          @click="emit('logout')"
-        >
-          <img
-            v-if="user.picture && !avatarError"
-            :src="user.picture"
-            :alt="user.name"
-            referrerpolicy="no-referrer"
-            class="w-full h-full object-cover"
-            @error="onAvatarError"
-          />
-          <!-- Fallback: coloured circle with first letter -->
-          <span
-            v-else
-            class="w-full h-full bg-accent/20 border border-accent/30 flex items-center justify-center text-accent text-sm font-semibold"
-            aria-hidden="true"
+        <!-- User avatar + dropdown menu -->
+        <div class="relative">
+          <button
+            v-if="user"
+            type="button"
+            class="w-10 h-10 rounded-full overflow-hidden cursor-pointer ring-2 ring-transparent hover:ring-accent/30 transition-all"
+            :title="`Signed in as ${user.email}`"
+            @click="toggleUserMenu"
           >
-            {{ avatarFallback }}
-          </span>
-        </button>
+            <img
+              v-if="user.picture && !avatarError"
+              :src="user.picture"
+              :alt="user.name"
+              referrerpolicy="no-referrer"
+              class="w-full h-full object-cover"
+              @error="onAvatarError"
+            />
+            <span
+              v-else
+              class="w-full h-full bg-accent/20 border border-accent/30 flex items-center justify-center text-accent text-sm font-semibold"
+              aria-hidden="true"
+            >
+              {{ avatarFallback }}
+            </span>
+          </button>
 
-        <!-- Fallback logout (no user info loaded) -->
-        <button
-          v-else
-          type="button"
-          class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-card text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
-          @click="emit('logout')"
-        >
-          <svg class="w-[18px] h-[18px]" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M10 2H12.5C13.3 2 14 2.7 14 3.5V12.5C14 13.3 13.3 14 12.5 14H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-            <path d="M6 8H1M1 8L3.5 5.5M1 8L3.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </button>
+          <!-- Fallback avatar (no user info) -->
+          <button
+            v-else
+            type="button"
+            class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-card text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+            @click="emit('logout')"
+          >
+            <svg class="w-[18px] h-[18px]" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M10 2H12.5C13.3 2 14 2.7 14 3.5V12.5C14 13.3 13.3 14 12.5 14H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              <path d="M6 8H1M1 8L3.5 5.5M1 8L3.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+
+          <!-- Dropdown menu -->
+          <Teleport to="body">
+            <div v-if="showUserMenu && user" class="fixed inset-0 z-50" @click="showUserMenu = false">
+              <div
+                class="fixed top-16 right-4 w-64 bg-surface-card border border-border rounded-xl shadow-xl p-4 z-50"
+                @click.stop
+              >
+                <!-- User info -->
+                <div class="flex items-center gap-3 mb-3 pb-3 border-b border-border">
+                  <img
+                    v-if="user.picture && !avatarError"
+                    :src="user.picture"
+                    :alt="user.name"
+                    referrerpolicy="no-referrer"
+                    class="w-9 h-9 rounded-full object-cover shrink-0"
+                  />
+                  <div class="min-w-0">
+                    <p class="text-sm font-semibold truncate">{{ user.name }}</p>
+                    <p class="text-xs text-text-muted truncate">{{ user.email }}</p>
+                  </div>
+                </div>
+                <!-- Sign out -->
+                <button
+                  type="button"
+                  class="w-full flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary py-2 px-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+                  @click="handleLogout"
+                >
+                  <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M10 2H12.5C13.3 2 14 2.7 14 3.5V12.5C14 13.3 13.3 14 12.5 14H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                    <path d="M6 8H1M1 8L3.5 5.5M1 8L3.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                  Sign out
+                </button>
+              </div>
+            </div>
+          </Teleport>
+        </div>
 
       </div>
     </div>
