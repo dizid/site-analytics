@@ -14,13 +14,13 @@ defineProps<{
 <template>
   <div class="flex flex-col gap-0.5 min-w-0">
     <!-- Label -->
-    <span class="text-xs text-text-secondary truncate leading-none">
+    <span class="text-[10px] font-bold text-text-secondary uppercase tracking-wider truncate leading-none">
       {{ label }}
     </span>
 
     <!-- Value + trend indicator -->
     <div class="flex items-center gap-1">
-      <span class="text-lg font-semibold text-text-primary leading-tight truncate">
+      <span class="text-lg font-bold text-text-primary leading-tight truncate">
         {{ value }}
       </span>
 

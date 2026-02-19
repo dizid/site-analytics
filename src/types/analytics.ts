@@ -52,3 +52,32 @@ export interface UserInfo {
   name: string
   picture: string
 }
+
+export interface PageStats {
+  pagePath: string
+  pageviews: number
+  bounceRate: number
+}
+
+export interface DeviceBreakdown {
+  device: string
+  sessions: number
+}
+
+export interface CountryStats {
+  country: string
+  sessions: number
+}
+
+export interface PropertyDetail {
+  propertyId: string
+  pages: PageStats[]
+  devices: DeviceBreakdown[]
+  countries: CountryStats[]
+}
+
+export interface DetailResponse {
+  generatedAt: string
+  dateRange: DateRange
+  detail: PropertyDetail
+}

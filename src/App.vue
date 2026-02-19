@@ -6,8 +6,10 @@ import LandingPage from './components/LandingPage.vue'
 import DashboardHeader from './components/DashboardHeader.vue'
 import SiteCard from './components/SiteCard.vue'
 import SiteTable from './components/SiteTable.vue'
+import PropertyDetail from './components/PropertyDetail.vue'
 import LoadingSkeleton from './components/LoadingSkeleton.vue'
 import ErrorBanner from './components/ErrorBanner.vue'
+import AggregateKPIs from './components/AggregateKPIs.vue'
 import AppFooter from './components/AppFooter.vue'
 
 const { isAuthenticated, isLoading: authLoading, user, logout } = useAuth()
@@ -20,12 +22,20 @@ const {
   sortColumn,
   sortDirection,
   successCount,
-  errorCount,
   totalSessions,
+  totalUsers,
+  avgBounceRate,
+  avgDuration,
+  selectedProperty,
+  propertyDetail,
+  isDetailLoading,
+  detailError,
   fetchReport,
   setViewMode,
   setSortColumn,
   refresh,
+  selectProperty,
+  deselectProperty,
 } = useAnalyticsData()
 
 // Fetch initial data when authenticated
@@ -55,48 +65,68 @@ watch(isAuthenticated, (auth) => {
       :view-mode="viewMode"
       :is-loading="isLoading"
       :user="user"
+      :success-count="successCount"
       @refresh="refresh"
       @toggle-view="setViewMode(viewMode === 'cards' ? 'table' : 'cards')"
       @logout="logout"
     />
 
-    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-      <!-- Summary stats -->
-      <div v-if="!isLoading && successCount > 0" class="mb-6 flex flex-wrap gap-4 text-sm text-text-secondary">
-        <span>{{ successCount }} sites loaded</span>
-        <span v-if="errorCount > 0" class="text-danger">{{ errorCount }} failed</span>
-        <span>{{ totalSessions.toLocaleString() }} total sessions</span>
-      </div>
+    <main class="mx-auto max-w-7xl px-5 py-6 sm:px-6">
 
-      <!-- Global error -->
-      <ErrorBanner
-        v-if="error && sortedProperties.length === 0"
-        :message="error"
-        @retry="refresh"
+      <!-- Detail view: single property breakdown -->
+      <PropertyDetail
+        v-if="selectedProperty"
+        :property="selectedProperty"
+        :detail="propertyDetail"
+        :is-loading="isDetailLoading"
+        :error="detailError"
+        @back="deselectProperty"
       />
 
-      <!-- Loading skeletons -->
-      <div v-if="isLoading && sortedProperties.length === 0" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <LoadingSkeleton v-for="i in 6" :key="i" />
-      </div>
-
-      <!-- Card view -->
-      <div v-else-if="viewMode === 'cards'" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <SiteCard
-          v-for="property in sortedProperties"
-          :key="property.propertyId"
-          :property="property"
+      <!-- List view: all properties -->
+      <template v-else>
+        <!-- Aggregate KPIs -->
+        <AggregateKPIs
+          :total-sessions="totalSessions"
+          :total-users="totalUsers"
+          :avg-bounce-rate="avgBounceRate"
+          :avg-duration="avgDuration"
+          :is-loading="isLoading"
         />
-      </div>
 
-      <!-- Table view -->
-      <SiteTable
-        v-else
-        :properties="sortedProperties"
-        :sort-column="sortColumn"
-        :sort-direction="sortDirection"
-        @sort="setSortColumn"
-      />
+        <!-- Global error -->
+        <ErrorBanner
+          v-if="error && sortedProperties.length === 0"
+          :message="error"
+          @retry="refresh"
+        />
+
+        <!-- Loading skeletons -->
+        <div v-if="isLoading && sortedProperties.length === 0" class="space-y-4">
+          <LoadingSkeleton v-for="i in 6" :key="i" />
+        </div>
+
+        <!-- Card view -->
+        <div v-else-if="viewMode === 'cards'" class="space-y-4">
+          <SiteCard
+            v-for="(property, i) in sortedProperties"
+            :key="property.propertyId"
+            :property="property"
+            :index="i"
+            @select="selectProperty"
+          />
+        </div>
+
+        <!-- Table view -->
+        <SiteTable
+          v-else
+          :properties="sortedProperties"
+          :sort-column="sortColumn"
+          :sort-direction="sortDirection"
+          @sort="setSortColumn"
+          @select="selectProperty"
+        />
+      </template>
     </main>
 
     <AppFooter />

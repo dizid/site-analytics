@@ -19,7 +19,10 @@ export default async (request: Request, _context: Context): Promise<Response> =>
   }
 
   const clientId = process.env.GOOGLE_CLIENT_ID
-  const siteUrl  = process.env.SITE_URL?.replace(/\/+$/, '')
+  // Derive base URL from the request itself so localhost dev doesn't redirect to production
+  // (the @netlify/vite-plugin injects remote env vars that override local .env SITE_URL)
+  const requestOrigin = new URL(request.url).origin
+  const siteUrl = requestOrigin !== 'null' ? requestOrigin : process.env.SITE_URL?.replace(/\/+$/, '')
 
   if (!clientId || !siteUrl) {
     console.error('GOOGLE_CLIENT_ID or SITE_URL environment variable is not configured')

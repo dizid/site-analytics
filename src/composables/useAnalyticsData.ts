@@ -11,6 +11,7 @@ import { ref, computed, watch, readonly } from 'vue'
 import type { ComputedRef } from 'vue'
 import type {
   PropertyResult,
+  PropertyDetail,
   SortColumn,
   SortDirection,
   ViewMode,
@@ -41,6 +42,12 @@ const viewMode = ref<ViewMode>(
 
 const sortColumn = ref<SortColumn>('sessions')
 const sortDirection = ref<SortDirection>('desc')
+
+// Detail view state
+const selectedProperty = ref<PropertyResult | null>(null)
+const propertyDetail = ref<PropertyDetail | null>(null)
+const isDetailLoading = ref(false)
+const detailError = ref<string | null>(null)
 
 // Grab shared instances (these are singletons themselves)
 const cache = useCache()
@@ -108,6 +115,29 @@ const errorCount: ComputedRef<number> = computed(
 const totalSessions: ComputedRef<number> = computed(() =>
   properties.value.reduce((sum, p) => sum + (p.metrics?.sessions ?? 0), 0),
 )
+
+// Total active users across all properties
+const totalUsers: ComputedRef<number> = computed(() =>
+  properties.value.reduce((sum, p) => sum + (p.metrics?.activeUsers ?? 0), 0),
+)
+
+// Session-weighted average bounce rate across all properties
+const avgBounceRate: ComputedRef<number> = computed(() => {
+  const valid = properties.value.filter(p => p.metrics)
+  if (valid.length === 0) return 0
+  const sessions = valid.reduce((s, p) => s + p.metrics!.sessions, 0)
+  if (sessions === 0) return 0
+  return valid.reduce((s, p) => s + (p.metrics!.bounceRate * p.metrics!.sessions), 0) / sessions
+})
+
+// Session-weighted average session duration across all properties
+const avgDuration: ComputedRef<number> = computed(() => {
+  const valid = properties.value.filter(p => p.metrics)
+  if (valid.length === 0) return 0
+  const sessions = valid.reduce((s, p) => s + p.metrics!.sessions, 0)
+  if (sessions === 0) return 0
+  return valid.reduce((s, p) => s + (p.metrics!.averageSessionDuration * p.metrics!.sessions), 0) / sessions
+})
 
 // ---------------------------------------------------------------------------
 // Actions
@@ -187,6 +217,39 @@ async function refresh(): Promise<void> {
   return fetchReport(true)
 }
 
+async function selectProperty(property: PropertyResult): Promise<void> {
+  selectedProperty.value = property
+  propertyDetail.value = null
+  detailError.value = null
+  isDetailLoading.value = true
+
+  const userId = getUserId()
+  const cacheKey = `ga4:detail:${userId}:${property.propertyId}:${dateRange.value}`
+
+  const cached = cache.get<PropertyDetail>(cacheKey)
+  if (cached) {
+    propertyDetail.value = cached
+    isDetailLoading.value = false
+    return
+  }
+
+  try {
+    const response = await api.getPropertyDetail(property.propertyId, dateRange.value)
+    propertyDetail.value = response.detail
+    cache.set(cacheKey, response.detail, CACHE_TTL_6H)
+  } catch (err) {
+    detailError.value = err instanceof Error ? err.message : 'Failed to load details'
+  } finally {
+    isDetailLoading.value = false
+  }
+}
+
+function deselectProperty(): void {
+  selectedProperty.value = null
+  propertyDetail.value = null
+  detailError.value = null
+}
+
 // ---------------------------------------------------------------------------
 // Watchers
 // ---------------------------------------------------------------------------
@@ -194,6 +257,9 @@ async function refresh(): Promise<void> {
 // Re-fetch whenever the user changes the date range
 watch(dateRange, () => {
   fetchReport()
+  if (selectedProperty.value) {
+    selectProperty(selectedProperty.value)
+  }
 })
 
 // ---------------------------------------------------------------------------
@@ -216,11 +282,22 @@ export function useAnalyticsData() {
     successCount,
     errorCount,
     totalSessions,
+    totalUsers: readonly(totalUsers),
+    avgBounceRate: readonly(avgBounceRate),
+    avgDuration: readonly(avgDuration),
+
+    // Detail view state
+    selectedProperty: readonly(selectedProperty),
+    propertyDetail: readonly(propertyDetail),
+    isDetailLoading: readonly(isDetailLoading),
+    detailError: readonly(detailError),
 
     // Actions
     fetchReport,
     setViewMode,
     setSortColumn,
     refresh,
+    selectProperty,
+    deselectProperty,
   }
 }

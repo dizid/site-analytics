@@ -110,7 +110,9 @@ export default async (request: Request, _context: Context): Promise<Response> =>
     return new Response('Method not allowed', { status: 405 })
   }
 
-  const siteUrl = process.env.SITE_URL?.replace(/\/+$/, '')
+  // Derive base URL from the request itself so localhost dev doesn't redirect to production
+  const requestOrigin = new URL(request.url).origin
+  const siteUrl = requestOrigin !== 'null' ? requestOrigin : process.env.SITE_URL?.replace(/\/+$/, '')
   if (!siteUrl) {
     console.error('SITE_URL environment variable is not configured')
     return new Response('Internal server error', { status: 500 })

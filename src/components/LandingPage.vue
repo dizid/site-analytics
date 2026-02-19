@@ -95,7 +95,7 @@ const plans = [
       >
         <div
           class="h-[600px] w-[600px] rounded-full opacity-20"
-          style="background: radial-gradient(circle, #6366f1 0%, transparent 70%)"
+          style="background: radial-gradient(circle, #137fec 0%, transparent 70%)"
         />
       </div>
 

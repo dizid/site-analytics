@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * DateRangePicker.vue
- * Three-pill date range selector: 7d / 30d / 90d.
+ * Full-width pill bar date range selector: 7d / 30d / 90d.
  * Fully compatible with v-model via modelValue / update:modelValue.
  */
 
@@ -30,16 +30,16 @@ function select(range: DateRange): void {
 </script>
 
 <template>
-  <div class="flex items-center gap-1" role="group" aria-label="Date range">
+  <div class="flex bg-surface-card p-1 rounded-xl" role="group" aria-label="Date range">
     <button
       v-for="option in options"
       :key="option.value"
       type="button"
       :class="[
-        'px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer',
+        'flex-1 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer',
         modelValue === option.value
-          ? 'bg-accent text-white'
-          : 'bg-white/5 text-text-secondary hover:bg-white/10',
+          ? 'bg-surface-card-hover text-text-primary shadow-sm'
+          : 'text-text-secondary hover:text-text-primary',
       ]"
       :aria-pressed="modelValue === option.value"
       @click="select(option.value)"

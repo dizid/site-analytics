@@ -1,41 +1,42 @@
 <script setup lang="ts">
 /**
  * LoadingSkeleton.vue
- * Pulse skeleton card that mirrors the layout of SiteCard.
- * No props — one-size-fits-all placeholder during data loading.
+ * Pulse skeleton card matching the new SiteCard layout:
+ * icon placeholder + text lines + 2-col metric placeholders.
  */
 </script>
 
 <template>
-  <!-- Glass morphism container matching SiteCard dimensions -->
-  <div class="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-5">
+  <!-- Solid dark card matching SiteCard shape -->
+  <div class="bg-surface-card rounded-2xl border border-border p-5">
     <div class="animate-pulse">
 
-      <!-- Header: property name placeholder -->
-      <div class="h-4 bg-white/10 rounded-md w-3/5 mb-4" />
-
-      <!-- Stats grid: 2 columns x 3 rows of stat badge placeholders -->
-      <div class="grid grid-cols-2 gap-x-4 gap-y-3 mb-4">
-        <!-- 6 stat badge stubs -->
-        <div v-for="i in 6" :key="i" class="flex flex-col gap-1">
-          <!-- Label placeholder -->
-          <div class="h-2.5 bg-white/10 rounded w-2/3" />
-          <!-- Value placeholder -->
-          <div class="h-5 bg-white/10 rounded w-4/5" />
+      <!-- Top: icon + name area -->
+      <div class="flex justify-between items-start mb-4">
+        <div class="flex items-center gap-3">
+          <!-- Icon placeholder -->
+          <div class="w-10 h-10 rounded-xl bg-white/[0.06]" />
+          <div>
+            <!-- Property name placeholder -->
+            <div class="h-4 bg-white/[0.06] rounded-md w-32 mb-1.5" />
+            <!-- Domain placeholder -->
+            <div class="h-2.5 bg-white/[0.06] rounded w-20" />
+          </div>
         </div>
+        <!-- Sparkline placeholder -->
+        <div class="w-12 h-6 bg-white/[0.06] rounded" />
       </div>
 
-      <!-- Sparkline area placeholder -->
-      <div class="h-8 bg-white/10 rounded-lg w-full mb-3" />
-
-      <!-- Traffic source badges row -->
-      <div class="flex gap-2">
-        <div
-          v-for="i in 3"
-          :key="i"
-          class="h-5 bg-white/10 rounded-full"
-          :class="i === 1 ? 'w-16' : i === 2 ? 'w-12' : 'w-10'"
-        />
+      <!-- Bottom: 2-col metric placeholders -->
+      <div class="grid grid-cols-2 gap-4">
+        <div class="bg-white/[0.03] p-3 rounded-xl">
+          <div class="h-2.5 bg-white/[0.06] rounded w-16 mb-2" />
+          <div class="h-5 bg-white/[0.06] rounded w-12" />
+        </div>
+        <div class="bg-white/[0.03] p-3 rounded-xl">
+          <div class="h-2.5 bg-white/[0.06] rounded w-14 mb-2" />
+          <div class="h-5 bg-white/[0.06] rounded w-10" />
+        </div>
       </div>
 
     </div>

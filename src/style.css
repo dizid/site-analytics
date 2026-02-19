@@ -1,13 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-accent: #6366f1;
-  --color-accent-hover: #4f46e5;
-  --color-surface: #0f172a;
-  --color-surface-card: rgba(255, 255, 255, 0.05);
-  --color-surface-card-hover: rgba(255, 255, 255, 0.08);
-  --color-border: rgba(255, 255, 255, 0.1);
-  --color-border-hover: rgba(255, 255, 255, 0.2);
+  --color-accent: #137fec;
+  --color-accent-hover: #1171d4;
+  --color-surface: #0a0f14;
+  --color-surface-card: #161c24;
+  --color-surface-card-hover: #1c2430;
+  --color-border: rgba(148, 163, 184, 0.08);
+  --color-border-hover: rgba(148, 163, 184, 0.15);
   --color-text-primary: #f8fafc;
   --color-text-secondary: #94a3b8;
   --color-text-muted: #64748b;
@@ -21,7 +22,7 @@ body {
   min-height: 100vh;
   background-color: var(--color-surface);
   color: var(--color-text-primary);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

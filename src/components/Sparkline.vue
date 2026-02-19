@@ -15,7 +15,7 @@ const props = withDefaults(
     height?: number
   }>(),
   {
-    color: '#6366f1',
+    color: '#137fec',
     width: 120,
     height: 32,
   }

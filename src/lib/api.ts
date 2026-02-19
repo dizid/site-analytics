@@ -5,7 +5,7 @@
  */
 
 import { useAuth } from '../composables/useAuth'
-import type { DateRange, ReportResponse } from '../types/analytics'
+import type { DateRange, ReportResponse, DetailResponse } from '../types/analytics'
 
 // ---------------------------------------------------------------------------
 // Core fetch wrapper
@@ -55,5 +55,11 @@ export const api = {
    */
   getReport(days: DateRange): Promise<ReportResponse> {
     return apiFetch<ReportResponse>(`/api/analytics?days=${days}`)
+  },
+
+  getPropertyDetail(propertyId: string, days: DateRange): Promise<DetailResponse> {
+    return apiFetch<DetailResponse>(
+      `/api/analytics-detail?property=${encodeURIComponent(propertyId)}&days=${days}`
+    )
   },
 }

@@ -16,6 +16,8 @@ const props = defineProps<{
   isLoading: boolean
   /** Authenticated user info — null only before auth resolves (shouldn't happen here) */
   user: UserInfo | null
+  /** Number of successfully loaded properties */
+  successCount?: number
 }>()
 
 const emit = defineEmits<{
@@ -93,39 +95,41 @@ const selectedRange = computed<DateRange>({
 
 <template>
   <!-- Sticky top bar -->
-  <header class="sticky top-0 z-10 bg-surface/80 backdrop-blur-md border-b border-white/10">
-    <div class="px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+  <header class="sticky top-0 z-20 bg-surface/80 backdrop-blur-xl px-5 pb-4 pt-4">
+    <div class="flex items-center justify-between">
 
-      <!-- Left: title + last updated -->
-      <div class="flex flex-col min-w-0">
-        <h1 class="text-xl font-bold text-text-primary leading-none">
-          Site Analytics
+      <!-- Left: title + subtitle -->
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">
+          Properties
         </h1>
-        <p
-          v-if="lastUpdatedLabel"
-          class="text-xs text-text-muted mt-0.5 leading-none"
-        >
-          Updated {{ lastUpdatedLabel }}
+        <p class="text-sm text-text-secondary font-medium">
+          <template v-if="successCount !== undefined && successCount > 0">
+            {{ successCount }} connected site{{ successCount === 1 ? '' : 's' }}
+          </template>
+          <template v-else-if="isLoading">
+            Loading...
+          </template>
+          <template v-else>
+            No sites connected
+          </template>
         </p>
       </div>
 
       <!-- Right: controls -->
-      <div class="flex items-center gap-2 flex-wrap">
-
-        <!-- Date range picker -->
-        <DateRangePicker v-model="selectedRange" />
+      <div class="flex items-center gap-3">
 
         <!-- View toggle: cards <-> table -->
         <button
           type="button"
-          class="bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg p-2 text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+          class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-card text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
           :aria-label="viewMode === 'cards' ? 'Switch to table view' : 'Switch to card view'"
           @click="emit('toggleView')"
         >
           <!-- Cards icon -->
           <svg
             v-if="viewMode === 'cards'"
-            class="w-4 h-4"
+            class="w-[18px] h-[18px]"
             viewBox="0 0 16 16"
             fill="none"
             aria-hidden="true"
@@ -138,7 +142,7 @@ const selectedRange = computed<DateRange>({
           <!-- Table icon -->
           <svg
             v-else
-            class="w-4 h-4"
+            class="w-[18px] h-[18px]"
             viewBox="0 0 16 16"
             fill="none"
             aria-hidden="true"
@@ -152,12 +156,12 @@ const selectedRange = computed<DateRange>({
         <button
           type="button"
           :disabled="isLoading"
-          class="bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg p-2 text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-card text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           aria-label="Refresh data"
           @click="emit('refresh')"
         >
           <svg
-            :class="['w-4 h-4 transition-transform', isLoading ? 'animate-spin' : '']"
+            :class="['w-[18px] h-[18px] transition-transform', isLoading ? 'animate-spin' : '']"
             viewBox="0 0 16 16"
             fill="none"
             aria-hidden="true"
@@ -182,47 +186,54 @@ const selectedRange = computed<DateRange>({
         <button
           v-if="user"
           type="button"
-          class="flex items-center gap-2 text-xs text-text-muted hover:text-text-secondary transition-colors px-2 py-1.5 rounded-lg hover:bg-white/5 cursor-pointer"
+          class="w-10 h-10 rounded-full overflow-hidden cursor-pointer"
           :title="`Signed in as ${user.email} — click to sign out`"
           @click="emit('logout')"
         >
-          <!-- Profile picture — falls back to initial letter if image 404s -->
-          <span class="relative w-6 h-6 shrink-0">
-            <img
-              v-if="user.picture && !avatarError"
-              :src="user.picture"
-              :alt="user.name"
-              referrerpolicy="no-referrer"
-              class="w-6 h-6 rounded-full object-cover"
-              @error="onAvatarError"
-            />
-            <!-- Fallback: coloured circle with first letter -->
-            <span
-              v-else
-              class="w-6 h-6 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center text-accent text-xs font-semibold"
-              aria-hidden="true"
-            >
-              {{ avatarFallback }}
-            </span>
+          <img
+            v-if="user.picture && !avatarError"
+            :src="user.picture"
+            :alt="user.name"
+            referrerpolicy="no-referrer"
+            class="w-full h-full object-cover"
+            @error="onAvatarError"
+          />
+          <!-- Fallback: coloured circle with first letter -->
+          <span
+            v-else
+            class="w-full h-full bg-accent/20 border border-accent/30 flex items-center justify-center text-accent text-sm font-semibold"
+            aria-hidden="true"
+          >
+            {{ avatarFallback }}
           </span>
-
-          <!-- Name (hidden on very small screens to save space) -->
-          <span class="hidden sm:inline truncate max-w-[120px]">{{ user.name || user.email }}</span>
-          <span class="text-text-muted">·</span>
-          <span>Sign out</span>
         </button>
 
         <!-- Fallback logout (no user info loaded) -->
         <button
           v-else
           type="button"
-          class="text-xs text-text-muted hover:text-text-secondary transition-colors px-2 py-1.5 rounded-lg hover:bg-white/5 cursor-pointer"
+          class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-card text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
           @click="emit('logout')"
         >
-          Sign out
+          <svg class="w-[18px] h-[18px]" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M10 2H12.5C13.3 2 14 2.7 14 3.5V12.5C14 13.3 13.3 14 12.5 14H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            <path d="M6 8H1M1 8L3.5 5.5M1 8L3.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
         </button>
 
       </div>
+    </div>
+
+    <!-- Last updated + date range row -->
+    <div class="flex items-center justify-between mt-4">
+      <p
+        v-if="lastUpdatedLabel"
+        class="text-xs text-text-muted"
+      >
+        Updated {{ lastUpdatedLabel }}
+      </p>
+      <div v-else />
+      <DateRangePicker v-model="selectedRange" />
     </div>
   </header>
 </template>
