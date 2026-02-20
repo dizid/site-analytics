@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="42%" r="55%">
+      <stop offset="0%" stop-color="#137fec" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#0a0f14" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="240" height="240" rx="24" fill="#0a0f14"/>
+  <rect width="240" height="240" rx="24" fill="url(#glow)"/>
+
+  <!-- Subtle border -->
+  <rect x="1" y="1" width="238" height="238" rx="23" fill="none" stroke="#ffffff" stroke-opacity="0.06" stroke-width="1"/>
+
+  <!-- Large logo mark centered -->
+  <g transform="translate(70, 52)">
+    <rect width="100" height="100" rx="22" fill="#137fec"/>
+    <!-- Bar chart -->
+    <rect x="18" y="50" width="14" height="30" rx="3" fill="#0a0f14"/>
+    <rect x="42" y="34" width="14" height="46" rx="3" fill="#0a0f14"/>
+    <rect x="66" y="18" width="14" height="62" rx="3" fill="#0a0f14"/>
+    <!-- Trend line -->
+    <polyline points="25,50 49,34 73,18" stroke="#60a5fa" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+  </g>
+
+  <!-- Product name -->
+  <text x="120" y="188" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700" fill="#f8fafc" text-anchor="middle">StatPilot</text>
+
+  <!-- Tagline -->
+  <text x="120" y="214" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">All your GA4 sites. One view.</text>
+</svg>

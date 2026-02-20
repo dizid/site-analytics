@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#137fec" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#0a0f14" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="50%" cy="75%" r="40%">
+      <stop offset="0%" stop-color="#137fec" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#0a0f14" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="glass" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.03"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#137fec" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#137fec" stop-opacity="1"/>
+    </linearGradient>
+    <pattern id="dots" x="0" y="0" width="32" height="32" patternUnits="userSpaceOnUse">
+      <circle cx="16" cy="16" r="1" fill="#f8fafc"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1080" height="1920" fill="#0a0f14"/>
+  <rect width="1080" height="1920" fill="url(#glow)"/>
+  <rect width="1080" height="1920" fill="url(#glow2)"/>
+  <rect width="1080" height="1920" fill="url(#dots)" opacity="0.04"/>
+
+  <!-- Logo mark + name -->
+  <g transform="translate(440, 120)">
+    <rect width="52" height="52" rx="12" fill="#137fec"/>
+    <rect x="10" y="26" width="8" height="16" rx="2" fill="#0a0f14"/>
+    <rect x="22" y="18" width="8" height="24" rx="2" fill="#0a0f14"/>
+    <rect x="34" y="10" width="8" height="32" rx="2" fill="#0a0f14"/>
+    <polyline points="14,26 26,18 38,10" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" fill="none"/>
+  </g>
+  <text x="540" y="206" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="700" fill="#f8fafc" text-anchor="middle">StatPilot</text>
+
+  <!-- Hero headline (large, vertical stack) -->
+  <text x="540" y="340" font-family="system-ui, -apple-system, sans-serif" font-size="62" font-weight="800" fill="#f8fafc" text-anchor="middle">Every GA4</text>
+  <text x="540" y="414" font-family="system-ui, -apple-system, sans-serif" font-size="62" font-weight="800" fill="#f8fafc" text-anchor="middle">property.</text>
+  <text x="540" y="500" font-family="system-ui, -apple-system, sans-serif" font-size="62" font-weight="800" fill="#f8fafc" text-anchor="middle">One dashboard.</text>
+  <text x="540" y="590" font-family="system-ui, -apple-system, sans-serif" font-size="62" font-weight="800" fill="#137fec" text-anchor="middle">Two seconds.</text>
+
+  <!-- Subheadline -->
+  <text x="540" y="660" font-family="system-ui, -apple-system, sans-serif" font-size="22" fill="#94a3b8" text-anchor="middle">Sign in with Google. See everything.</text>
+
+  <!-- Main feature card (full-width, detailed) -->
+  <rect x="60" y="730" width="960" height="440" rx="24" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.1" stroke-width="1"/>
+
+  <!-- Card title -->
+  <text x="100" y="780" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="700" fill="#f8fafc">portfolio-site.com</text>
+
+  <!-- Metrics 3x2 grid -->
+  <text x="100" y="830" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#94a3b8">Sessions</text>
+  <text x="100" y="862" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="700" fill="#f8fafc">1,247</text>
+
+  <text x="360" y="830" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#94a3b8">Users</text>
+  <text x="360" y="862" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="700" fill="#f8fafc">892</text>
+
+  <text x="600" y="830" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#94a3b8">New Users</text>
+  <text x="600" y="862" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="700" fill="#f8fafc">645</text>
+
+  <text x="100" y="910" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#94a3b8">Pageviews</text>
+  <text x="100" y="942" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="700" fill="#f8fafc">3,812</text>
+
+  <text x="360" y="910" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#94a3b8">Bounce Rate</text>
+  <text x="360" y="942" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="700" fill="#f8fafc">42.3%</text>
+
+  <text x="600" y="910" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#94a3b8">Avg Duration</text>
+  <text x="600" y="942" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="700" fill="#f8fafc">3:24</text>
+
+  <!-- Large sparkline -->
+  <polyline points="100,1020 140,1012 180,1018 220,1002 260,1008 300,994 340,1000 380,986 420,992 460,978 500,984 540,970 580,976 620,964 660,968 700,956 740,960 780,948 820,954 860,942 900,946 940,934 980,930" fill="none" stroke="url(#spark)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Source badges -->
+  <rect x="100" y="1086" width="140" height="36" rx="18" fill="#ffffff" fill-opacity="0.05" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+  <text x="170" y="1110" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Direct</text>
+
+  <rect x="260" y="1086" width="200" height="36" rx="18" fill="#ffffff" fill-opacity="0.05" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+  <text x="360" y="1110" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Organic Search</text>
+
+  <rect x="480" y="1086" width="180" height="36" rx="18" fill="#ffffff" fill-opacity="0.05" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+  <text x="570" y="1110" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Social</text>
+
+  <rect x="680" y="1086" width="160" height="36" rx="18" fill="#ffffff" fill-opacity="0.05" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+  <text x="760" y="1110" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Referral</text>
+
+  <!-- Two smaller peek cards below -->
+  <rect x="60" y="1200" width="460" height="140" rx="20" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+  <text x="92" y="1240" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="600" fill="#f8fafc">saas-app.io</text>
+  <text x="92" y="1268" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#94a3b8">634 sessions</text>
+  <polyline points="92,1310 120,1304 148,1308 176,1296 204,1300 232,1290 260,1294 288,1284 316,1288 344,1278 372,1282 400,1274 428,1270 456,1264 484,1260" fill="none" stroke="#137fec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="560" y="1200" width="460" height="140" rx="20" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+  <text x="592" y="1240" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="600" fill="#f8fafc">blog.dev</text>
+  <text x="592" y="1268" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#94a3b8">328 sessions</text>
+  <polyline points="592,1310 620,1306 648,1312 676,1302 704,1298 732,1306 760,1296 788,1290 816,1298 844,1286 872,1290 900,1282 928,1278 956,1272 984,1268" fill="none" stroke="#137fec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- "+14 more" -->
+  <text x="540" y="1410" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#64748b" text-anchor="middle">+ 14 more properties</text>
+
+  <!-- CTA pill -->
+  <rect x="340" y="1560" width="400" height="70" rx="35" fill="#137fec"/>
+  <text x="540" y="1604" font-family="system-ui, -apple-system, sans-serif" font-size="26" font-weight="700" fill="#ffffff" text-anchor="middle">Try Free</text>
+
+  <!-- URL -->
+  <text x="540" y="1680" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#94a3b8" text-anchor="middle">statpilot.mom</text>
+
+  <!-- Swipe up hint -->
+  <g transform="translate(540, 1780)" opacity="0.4">
+    <path d="M-8,12 L0,4 L8,12" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M-8,22 L0,14 L8,22" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+</svg>

@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <defs>
+    <radialGradient id="glow" cx="35%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#137fec" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#0a0f14" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="glass" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.03"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#137fec" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#137fec" stop-opacity="1"/>
+    </linearGradient>
+    <pattern id="dots" x="0" y="0" width="32" height="32" patternUnits="userSpaceOnUse">
+      <circle cx="16" cy="16" r="1" fill="#f8fafc"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="640" fill="#0a0f14"/>
+  <rect width="1280" height="640" fill="url(#glow)"/>
+  <rect width="1280" height="640" fill="url(#dots)" opacity="0.04"/>
+
+  <!-- Logo mark -->
+  <g transform="translate(80, 80)">
+    <rect width="44" height="44" rx="10" fill="#137fec"/>
+    <rect x="8" y="22" width="7" height="14" rx="1.5" fill="#0a0f14"/>
+    <rect x="18" y="15" width="7" height="21" rx="1.5" fill="#0a0f14"/>
+    <rect x="28" y="8" width="7" height="28" rx="1.5" fill="#0a0f14"/>
+    <polyline points="11.5,22 21.5,15 31.5,8" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" fill="none"/>
+  </g>
+  <text x="136" y="112" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700" fill="#f8fafc">StatPilot</text>
+
+  <!-- Headline -->
+  <text x="80" y="210" font-family="system-ui, -apple-system, sans-serif" font-size="48" font-weight="800" fill="#f8fafc">Every GA4 property.</text>
+  <text x="80" y="268" font-family="system-ui, -apple-system, sans-serif" font-size="48" font-weight="800" fill="#f8fafc">One dashboard.</text>
+  <text x="80" y="326" font-family="system-ui, -apple-system, sans-serif" font-size="48" font-weight="800" fill="#137fec">Two seconds.</text>
+
+  <!-- Subheadline -->
+  <text x="80" y="380" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#94a3b8">Multi-property GA4 analytics dashboard</text>
+
+  <!-- Tech stack pills -->
+  <g transform="translate(80, 420)">
+    <rect x="0" y="0" width="72" height="32" rx="16" fill="#ffffff" fill-opacity="0.05" stroke="#ffffff" stroke-opacity="0.1" stroke-width="1"/>
+    <text x="36" y="21" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">Vue 3</text>
+
+    <rect x="86" y="0" width="110" height="32" rx="16" fill="#ffffff" fill-opacity="0.05" stroke="#ffffff" stroke-opacity="0.1" stroke-width="1"/>
+    <text x="141" y="21" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">TypeScript</text>
+
+    <rect x="210" y="0" width="82" height="32" rx="16" fill="#ffffff" fill-opacity="0.05" stroke="#ffffff" stroke-opacity="0.1" stroke-width="1"/>
+    <text x="251" y="21" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">Netlify</text>
+
+    <rect x="306" y="0" width="92" height="32" rx="16" fill="#137fec" fill-opacity="0.15" stroke="#137fec" stroke-opacity="0.3" stroke-width="1"/>
+    <text x="352" y="21" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#60a5fa" text-anchor="middle">GA4 API</text>
+  </g>
+
+  <!-- Right side: Dashboard UI mock -->
+  <rect x="700" y="60" width="500" height="520" rx="18" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+
+  <!-- Mock header -->
+  <rect x="722" y="82" width="456" height="36" rx="8" fill="#ffffff" fill-opacity="0.04"/>
+  <circle cx="742" cy="100" r="6" fill="#137fec" opacity="0.5"/>
+  <rect x="756" y="94" width="70" height="10" rx="3" fill="#ffffff" fill-opacity="0.12"/>
+  <rect x="1096" y="90" width="30" height="18" rx="9" fill="#137fec" opacity="0.3"/>
+  <rect x="1132" y="90" width="30" height="18" rx="9" fill="#ffffff" fill-opacity="0.05"/>
+
+  <!-- Card grid 2x3 -->
+  <!-- Row 1 -->
+  <rect x="722" y="134" width="218" height="110" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.06" stroke-width="1"/>
+  <rect x="738" y="150" width="80" height="8" rx="2" fill="#f8fafc" fill-opacity="0.5"/>
+  <text x="738" y="178" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#f8fafc">1,247</text>
+  <polyline points="738,210 756,204 774,208 792,198 810,202 828,194 846,198 864,190 882,194 900,186 918,188 924,184" fill="none" stroke="url(#spark)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="960" y="134" width="218" height="110" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.06" stroke-width="1"/>
+  <rect x="976" y="150" width="65" height="8" rx="2" fill="#f8fafc" fill-opacity="0.5"/>
+  <text x="976" y="178" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#f8fafc">634</text>
+  <polyline points="976,210 994,206 1012,212 1030,202 1048,198 1066,206 1084,196 1102,190 1120,198 1138,188 1156,184 1162,180" fill="none" stroke="url(#spark)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Row 2 -->
+  <rect x="722" y="260" width="218" height="110" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.06" stroke-width="1"/>
+  <rect x="738" y="276" width="95" height="8" rx="2" fill="#f8fafc" fill-opacity="0.5"/>
+  <text x="738" y="304" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#f8fafc">328</text>
+  <polyline points="738,336 756,332 774,338 792,328 810,324 828,332 846,322 864,316 882,324 900,314 918,310 924,306" fill="none" stroke="url(#spark)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="960" y="260" width="218" height="110" rx="10" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.06" stroke-width="1"/>
+  <rect x="976" y="276" width="72" height="8" rx="2" fill="#f8fafc" fill-opacity="0.5"/>
+  <text x="976" y="304" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#f8fafc">156</text>
+  <polyline points="976,336 994,332 1012,338 1030,330 1048,326 1066,334 1084,324 1102,320 1120,328 1138,318 1156,322 1162,316" fill="none" stroke="url(#spark)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Row 3 (partial, fading) -->
+  <rect x="722" y="386" width="218" height="110" rx="10" fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/>
+  <rect x="738" y="402" width="60" height="8" rx="2" fill="#f8fafc" fill-opacity="0.3"/>
+  <text x="738" y="430" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#f8fafc" opacity="0.5">89</text>
+
+  <rect x="960" y="386" width="218" height="110" rx="10" fill="#ffffff" fill-opacity="0.03" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/>
+  <rect x="976" y="402" width="50" height="8" rx="2" fill="#f8fafc" fill-opacity="0.3"/>
+  <text x="976" y="430" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#f8fafc" opacity="0.5">42</text>
+
+  <!-- Fade overlay on bottom cards -->
+  <rect x="700" y="460" width="500" height="120" fill="#0a0f14" opacity="0.6"/>
+
+  <!-- URL -->
+  <text x="80" y="560" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#64748b">statpilot.mom</text>
+
+  <!-- Bottom accent line -->
+  <rect x="0" y="634" width="1280" height="6" fill="#137fec" opacity="0.25"/>
+</svg>

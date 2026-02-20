@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1584" height="396" viewBox="0 0 1584 396">
+  <defs>
+    <radialGradient id="glow" cx="40%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#137fec" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#0a0f14" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="glass" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.03"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#137fec" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#137fec" stop-opacity="1"/>
+    </linearGradient>
+    <pattern id="dots" x="0" y="0" width="32" height="32" patternUnits="userSpaceOnUse">
+      <circle cx="16" cy="16" r="1" fill="#f8fafc"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1584" height="396" fill="#0a0f14"/>
+  <rect width="1584" height="396" fill="url(#glow)"/>
+  <rect width="1584" height="396" fill="url(#dots)" opacity="0.04"/>
+
+  <!-- Logo mark -->
+  <g transform="translate(80, 148)">
+    <rect width="44" height="44" rx="10" fill="#137fec"/>
+    <rect x="8" y="22" width="7" height="14" rx="1.5" fill="#0a0f14"/>
+    <rect x="18" y="15" width="7" height="21" rx="1.5" fill="#0a0f14"/>
+    <rect x="28" y="8" width="7" height="28" rx="1.5" fill="#0a0f14"/>
+    <polyline points="11.5,22 21.5,15 31.5,8" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" fill="none"/>
+  </g>
+  <text x="140" y="180" font-family="system-ui, -apple-system, sans-serif" font-size="26" font-weight="700" fill="#f8fafc">StatPilot</text>
+
+  <!-- Divider line -->
+  <line x1="310" y1="140" x2="310" y2="256" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+
+  <!-- Headline -->
+  <text x="360" y="176" font-family="system-ui, -apple-system, sans-serif" font-size="36" font-weight="800" fill="#f8fafc">Every GA4 property.</text>
+  <text x="818" y="176" font-family="system-ui, -apple-system, sans-serif" font-size="36" font-weight="800" fill="#f8fafc">One dashboard.</text>
+
+  <!-- Subheadline -->
+  <text x="360" y="216" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#94a3b8">Sign in with Google. Auto-discover everything. Free to start.</text>
+
+  <!-- Three mini cards in a row -->
+  <!-- Card 1 -->
+  <rect x="360" y="250" width="200" height="86" rx="12" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+  <rect x="378" y="266" width="70" height="8" rx="2" fill="#f8fafc" fill-opacity="0.6"/>
+  <text x="378" y="292" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#f8fafc">1,247</text>
+  <polyline points="378,316 394,312 410,314 426,306 442,310 458,302 474,306 490,298 506,302 522,294 538,296" fill="none" stroke="url(#spark)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Card 2 -->
+  <rect x="580" y="250" width="200" height="86" rx="12" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+  <rect x="598" y="266" width="55" height="8" rx="2" fill="#f8fafc" fill-opacity="0.6"/>
+  <text x="598" y="292" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#f8fafc">634</text>
+  <polyline points="598,316 614,312 630,318 646,308 662,312 678,304 694,310 710,300 726,306 742,296 758,300" fill="none" stroke="url(#spark)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Card 3 -->
+  <rect x="800" y="250" width="200" height="86" rx="12" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+  <rect x="818" y="266" width="65" height="8" rx="2" fill="#f8fafc" fill-opacity="0.6"/>
+  <text x="818" y="292" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#f8fafc">328</text>
+  <polyline points="818,316 834,312 850,316 866,306 882,302 898,310 914,300 930,296 946,304 962,294 978,290" fill="none" stroke="url(#spark)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- URL bottom-right -->
+  <text x="1484" y="356" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#64748b" text-anchor="end">statpilot.mom</text>
+
+  <!-- Accent line bottom -->
+  <rect x="0" y="390" width="1584" height="6" fill="#137fec" opacity="0.25"/>
+</svg>
