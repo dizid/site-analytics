@@ -119,13 +119,16 @@ ALLOWED_EMAILS        # Comma-separated email allowlist (empty = allow all authe
 
 ## GCP Setup
 
-- Project: `fluid-b6251` (project number: `215702319746`)
-- OAuth consent screen: External, Testing mode
-- Required APIs: Google Analytics Data API, Google Analytics Admin API
+- Project: `statpilot-mom-ga4` (project number: `329396622222`)
+- OAuth client: "StatPilot Web" (under Google Auth Platform → Clients) — shared with other Dizid apps (googlesearchconsole.netlify.app, local dev variants); don't remove their redirect URIs
+- OAuth consent screen: External, Testing mode — test user `glaswerk@gmail.com` must stay listed under Audience
+- Required APIs: Google Analytics Data API, Google Analytics Admin API (enabled on `statpilot-mom-ga4`, not the old project)
 - OAuth scopes: openid, email, profile, analytics.readonly
 - Authorized redirect URIs:
   - `https://statpilot.mom/api/oauth/callback`
   - `http://localhost:5173/api/oauth/callback`
+
+**History:** the original project (`fluid-b6251`, #215702319746) was permanently deleted by Google — confirmed via Cloud Resource Manager API, not just the OAuth client. Its OAuth client was also auto-deleted for 6 months of inactivity before that (Google deletes inactive OAuth clients after 6 months; see the warning banner on any client's detail page in Google Auth Platform). Migrated to `statpilot-mom-ga4` on 2026-08-15 using a pre-existing client there. Credentials for `statpilot-mom-ga4` are in the gitignored `dev.md`.
 
 ## Deployment
 

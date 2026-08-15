@@ -115,7 +115,7 @@ async function discoverProperties(token: string): Promise<DiscoveredProperty[]> 
     if (!response.ok) {
       const body = await response.text()
       console.error(`Admin API accountSummaries failed (${response.status}): ${body}`)
-      throw new Error(`GA4 Admin API request failed (status ${response.status})`)
+      throw new Error(parseGoogleApiError(body, response.status))
     }
 
     const data = await response.json() as AdminAccountSummariesResponse

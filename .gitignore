@@ -31,3 +31,4 @@ dist-ssr
 
 # MCP config (contains local paths)
 .mcp.json
+.gstack/
