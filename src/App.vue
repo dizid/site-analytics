@@ -16,6 +16,7 @@ const { isAuthenticated, isLoading: authLoading, user, logout } = useAuth()
 const {
   sortedProperties,
   isLoading,
+  isRefreshing,
   error,
   lastFetchedAt,
   viewMode,
@@ -26,6 +27,7 @@ const {
   totalUsers,
   avgBounceRate,
   avgDuration,
+  previousAggregate,
   selectedProperty,
   propertyDetail,
   isDetailLoading,
@@ -35,6 +37,7 @@ const {
   setSortColumn,
   refresh,
   selectProperty,
+  retryDetail,
   deselectProperty,
 } = useAnalyticsData()
 
@@ -63,7 +66,7 @@ watch(isAuthenticated, (auth) => {
     <DashboardHeader
       :last-fetched-at="lastFetchedAt"
       :view-mode="viewMode"
-      :is-loading="isLoading"
+      :is-loading="isLoading || isRefreshing"
       :user="user"
       :success-count="successCount"
       :show-home="!!selectedProperty"
@@ -75,6 +78,17 @@ watch(isAuthenticated, (auth) => {
 
     <main class="mx-auto max-w-7xl px-5 py-6 sm:px-6">
 
+      <!-- Report error — shown in list AND detail view (a failed range switch
+           or refresh there would otherwise leave old numbers with no warning) -->
+      <ErrorBanner
+        v-if="error"
+        class="mb-4"
+        :message="sortedProperties.length > 0 || selectedProperty
+          ? `${error} — showing previously loaded data.`
+          : error"
+        @retry="refresh"
+      />
+
       <!-- Detail view: single property breakdown -->
       <PropertyDetail
         v-if="selectedProperty"
@@ -82,7 +96,9 @@ watch(isAuthenticated, (auth) => {
         :detail="propertyDetail"
         :is-loading="isDetailLoading"
         :error="detailError"
+        :overview-loading="isLoading"
         @back="deselectProperty"
+        @retry="retryDetail"
       />
 
       <!-- List view: all properties -->
@@ -93,14 +109,8 @@ watch(isAuthenticated, (auth) => {
           :total-users="totalUsers"
           :avg-bounce-rate="avgBounceRate"
           :avg-duration="avgDuration"
+          :previous="previousAggregate"
           :is-loading="isLoading"
-        />
-
-        <!-- Global error -->
-        <ErrorBanner
-          v-if="error && sortedProperties.length === 0"
-          :message="error"
-          @retry="refresh"
         />
 
         <!-- Loading skeletons -->

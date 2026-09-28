@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import type { PeriodTotals } from '../types/analytics'
 import { formatNumber, formatBounceRate, formatDuration } from '../lib/formatters'
+import DeltaBadge from './DeltaBadge.vue'
 
 defineProps<{
   totalSessions: number
@@ -7,6 +9,8 @@ defineProps<{
   avgBounceRate: number
   avgDuration: number
   isLoading: boolean
+  /** Portfolio totals for the previous period; null hides the deltas. */
+  previous?: PeriodTotals | null
 }>()
 </script>
 
@@ -15,28 +19,40 @@ defineProps<{
     <!-- Total Sessions -->
     <div class="bg-surface-card p-3 rounded-lg border border-border border-l-2 border-l-accent">
       <p class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1">Total Sessions</p>
-      <h3 v-if="!isLoading" class="text-xl font-bold tabular-nums">{{ formatNumber(totalSessions) }}</h3>
+      <div v-if="!isLoading" class="flex items-baseline gap-2">
+        <h3 class="text-xl font-bold tabular-nums">{{ formatNumber(totalSessions) }}</h3>
+        <DeltaBadge :current="totalSessions" :previous="previous?.sessions" />
+      </div>
       <div v-else class="h-7 w-16 bg-white/[0.06] rounded animate-pulse"></div>
     </div>
 
     <!-- Total Users -->
     <div class="bg-surface-card p-3 rounded-lg border border-border border-l-2 border-l-cyan-400">
       <p class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1">Total Users</p>
-      <h3 v-if="!isLoading" class="text-xl font-bold tabular-nums">{{ formatNumber(totalUsers) }}</h3>
+      <div v-if="!isLoading" class="flex items-baseline gap-2">
+        <h3 class="text-xl font-bold tabular-nums">{{ formatNumber(totalUsers) }}</h3>
+        <DeltaBadge :current="totalUsers" :previous="previous?.activeUsers" />
+      </div>
       <div v-else class="h-7 w-16 bg-white/[0.06] rounded animate-pulse"></div>
     </div>
 
     <!-- Avg Bounce Rate -->
     <div class="bg-surface-card p-3 rounded-lg border border-border border-l-2 border-l-amber-400">
       <p class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1">Bounce Rate</p>
-      <h3 v-if="!isLoading" class="text-xl font-bold tabular-nums">{{ formatBounceRate(avgBounceRate) }}</h3>
+      <div v-if="!isLoading" class="flex items-baseline gap-2">
+        <h3 class="text-xl font-bold tabular-nums">{{ formatBounceRate(avgBounceRate) }}</h3>
+        <DeltaBadge :current="avgBounceRate" :previous="previous?.bounceRate" mode="points" invert />
+      </div>
       <div v-else class="h-7 w-16 bg-white/[0.06] rounded animate-pulse"></div>
     </div>
 
     <!-- Avg Duration -->
     <div class="bg-surface-card p-3 rounded-lg border border-border border-l-2 border-l-emerald-400">
       <p class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1">Avg Session</p>
-      <h3 v-if="!isLoading" class="text-xl font-bold tabular-nums">{{ formatDuration(avgDuration) }}</h3>
+      <div v-if="!isLoading" class="flex items-baseline gap-2">
+        <h3 class="text-xl font-bold tabular-nums">{{ formatDuration(avgDuration) }}</h3>
+        <DeltaBadge :current="avgDuration" :previous="previous?.averageSessionDuration" />
+      </div>
       <div v-else class="h-7 w-16 bg-white/[0.06] rounded animate-pulse"></div>
     </div>
   </div>

@@ -6,21 +6,25 @@
  * 1. Validates session JWT
  * 2. Gets user's Google access token (transparently refreshes if needed)
  * 3. Auto-discovers user's GA4 properties via Analytics Admin API
- * 4. Fetches metrics + traffic sources for each property (batched)
+ * 4. Fetches trend, totals + traffic sources for each property (one batchRunReports call each)
  * 5. Returns a ReportResponse with all discovered properties
  */
 
 import type { Context } from '@netlify/functions'
 import type {
   DateRange,
-  DailyMetric,
-  TrafficSource,
-  PropertyMetrics,
   PropertyResult,
   ReportResponse,
 } from '../../src/types/analytics.js'
 import { JSON_HEADERS, validateSession } from './lib/auth.js'
 import { getValidAccessToken } from './lib/tokens.js'
+import {
+  parseDaysParam,
+  buildOverviewRequests,
+  parseMetricsReport,
+  parseSourcesReport,
+  type GA4ReportResponse,
+} from './lib/ga4-report.js'
 
 // GA4 Data API base URL
 const DATA_API_BASE = 'https://analyticsdata.googleapis.com/v1beta/properties'
@@ -43,32 +47,6 @@ function parseGoogleApiError(body: string, status: number): string {
     if (message) return message
   } catch { /* body wasn't JSON */ }
   return `GA4 API request failed (status ${status})`
-}
-
-// ---------------------------------------------------------------------------
-// Date range helpers
-// ---------------------------------------------------------------------------
-
-interface GA4DateRange {
-  startDate: string
-  endDate: string
-}
-
-// Maps our DateRange type to GA4 API date strings
-function buildDateRange(days: DateRange): GA4DateRange {
-  const map: Record<DateRange, GA4DateRange> = {
-    '7d':  { startDate: '7daysAgo',  endDate: 'yesterday' },
-    '30d': { startDate: '30daysAgo', endDate: 'yesterday' },
-    '90d': { startDate: '90daysAgo', endDate: 'yesterday' },
-  }
-  return map[days]
-}
-
-// Parses the ?days= query param. Falls back to '7d' for unknown values.
-function parseDaysParam(url: URL): DateRange {
-  const raw = url.searchParams.get('days') ?? '7d'
-  if (raw === '7d' || raw === '30d' || raw === '90d') return raw
-  return '7d'
 }
 
 // ---------------------------------------------------------------------------
@@ -179,41 +157,24 @@ async function fetchWebsiteUrl(
 }
 
 // ---------------------------------------------------------------------------
-// GA4 response parsing types
-// ---------------------------------------------------------------------------
-
-interface GA4DimensionValue {
-  value: string
-}
-
-interface GA4MetricValue {
-  value: string
-}
-
-interface GA4Row {
-  dimensionValues: GA4DimensionValue[]
-  metricValues: GA4MetricValue[]
-}
-
-interface GA4ReportResponse {
-  rows?: GA4Row[]
-}
-
-// ---------------------------------------------------------------------------
 // GA4 Data API calls
 // ---------------------------------------------------------------------------
 
-// Fetches the metrics + daily trend report for a single property.
-// Metrics returned in order: sessions, activeUsers, newUsers,
-// screenPageViews, bounceRate, averageSessionDuration
-async function fetchMetricsReport(
+interface PropertyReports {
+  trend: GA4ReportResponse
+  totals: GA4ReportResponse
+  sources: GA4ReportResponse
+}
+
+// Fetches all overview reports for a single property in ONE batchRunReports
+// request (see buildOverviewRequests for what each report contains).
+async function fetchPropertyReports(
   propertyId: string,
-  dateRange: GA4DateRange,
+  days: DateRange,
   token: string
-): Promise<GA4ReportResponse> {
-  // Strip "properties/" prefix if present to build the URL, then add it back
+): Promise<PropertyReports> {
   const id = propertyId.replace(/^properties\//, '')
-  const url = `${DATA_API_BASE}/${id}:runReport`
+  const url = `${DATA_API_BASE}/${id}:batchRunReports`
 
   const response = await fetch(url, {
     method: 'POST',
@@ -221,148 +182,36 @@ async function fetchMetricsReport(
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      dateRanges: [{ startDate: dateRange.startDate, endDate: dateRange.endDate }],
-      dimensions: [{ name: 'date' }],
-      metrics: [
-        { name: 'sessions' },
-        { name: 'activeUsers' },
-        { name: 'newUsers' },
-        { name: 'screenPageViews' },
-        { name: 'bounceRate' },
-        { name: 'averageSessionDuration' },
-      ],
-      orderBys: [{ dimension: { dimensionName: 'date' } }],
-    }),
+    body: JSON.stringify({ requests: buildOverviewRequests(days) }),
   })
 
   if (!response.ok) {
     const body = await response.text()
-    console.error(`Metrics report failed for ${id} (${response.status}): ${body}`)
+    console.error(`batchRunReports failed for ${id} (${response.status}): ${body}`)
     throw new Error(parseGoogleApiError(body, response.status))
   }
 
-  return response.json()
-}
-
-// Fetches the top-5 traffic sources report for a single property.
-async function fetchSourcesReport(
-  propertyId: string,
-  dateRange: GA4DateRange,
-  token: string
-): Promise<GA4ReportResponse> {
-  const id = propertyId.replace(/^properties\//, '')
-  const url = `${DATA_API_BASE}/${id}:runReport`
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      dateRanges: [{ startDate: dateRange.startDate, endDate: dateRange.endDate }],
-      dimensions: [{ name: 'sessionDefaultChannelGroup' }],
-      metrics: [{ name: 'sessions' }],
-      orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
-      limit: 5,
-    }),
-  })
-
-  if (!response.ok) {
-    const body = await response.text()
-    console.error(`Sources report failed for ${id} (${response.status}): ${body}`)
-    throw new Error(parseGoogleApiError(body, response.status))
-  }
-
-  return response.json()
-}
-
-// ---------------------------------------------------------------------------
-// Response parsing
-// ---------------------------------------------------------------------------
-
-// Parses the metrics report into PropertyMetrics.
-// Totals are summed across all date rows; bounceRate and averageSessionDuration
-// are weighted by sessions (not averaged by day count).
-function parseMetricsReport(data: GA4ReportResponse): PropertyMetrics {
-  const rows = data.rows ?? []
-
-  let sessions = 0
-  let activeUsers = 0
-  let newUsers = 0
-  let screenPageViews = 0
-  let bounceRateWeightedSum = 0
-  let avgSessionDurationWeightedSum = 0
-  const trend: DailyMetric[] = []
-
-  for (const row of rows) {
-    const mv = row.metricValues
-    const rowSessions    = parseFloat(mv[0]?.value ?? '0')
-    const rowActiveUsers = parseFloat(mv[1]?.value ?? '0')
-    const rowNewUsers    = parseFloat(mv[2]?.value ?? '0')
-    const rowPageViews   = parseFloat(mv[3]?.value ?? '0')
-    const rowBounceRate  = parseFloat(mv[4]?.value ?? '0')
-    const rowAvgDuration = parseFloat(mv[5]?.value ?? '0')
-
-    sessions           += rowSessions
-    activeUsers        += rowActiveUsers
-    newUsers           += rowNewUsers
-    screenPageViews    += rowPageViews
-
-    // Weight by sessions so high-traffic days dominate the average
-    bounceRateWeightedSum         += rowBounceRate * rowSessions
-    avgSessionDurationWeightedSum += rowAvgDuration * rowSessions
-
-    // date dimension comes back as YYYYMMDD — convert to YYYY-MM-DD
-    const rawDate = row.dimensionValues[0]?.value ?? ''
-    const date = rawDate.length === 8
-      ? `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`
-      : rawDate
-
-    trend.push({
-      date,
-      sessions: Math.round(rowSessions),
-      activeUsers: Math.round(rowActiveUsers),
-    })
-  }
-
-  return {
-    sessions:               Math.round(sessions),
-    activeUsers:            Math.round(activeUsers),
-    newUsers:               Math.round(newUsers),
-    screenPageViews:        Math.round(screenPageViews),
-    bounceRate:             sessions > 0 ? bounceRateWeightedSum / sessions : 0,
-    averageSessionDuration: sessions > 0 ? avgSessionDurationWeightedSum / sessions : 0,
-    trend,
-  }
-}
-
-// Parses the traffic sources report into TrafficSource[].
-function parseSourcesReport(data: GA4ReportResponse): TrafficSource[] {
-  return (data.rows ?? []).map((row) => ({
-    channel:  row.dimensionValues[0]?.value ?? 'Unknown',
-    sessions: Math.round(parseFloat(row.metricValues[0]?.value ?? '0')),
-  }))
+  const data = await response.json() as { reports?: GA4ReportResponse[] }
+  const [trend = {}, totals = {}, sources = {}] = data.reports ?? []
+  return { trend, totals, sources }
 }
 
 // ---------------------------------------------------------------------------
 // Per-property fetch orchestration
 // ---------------------------------------------------------------------------
 
-// Fetches both reports for a single property and assembles a PropertyResult.
+// Fetches all reports for a single property and assembles a PropertyResult.
 // On any error the property is returned with metrics: null and an error message
 // so that one failing property doesn't break the entire response.
 async function fetchProperty(
   propertyId: string,
   displayName: string,
-  dateRange: GA4DateRange,
+  days: DateRange,
   token: string
 ): Promise<PropertyResult> {
   try {
-    const [metricsData, sourcesData, websiteUrl] = await Promise.all([
-      fetchMetricsReport(propertyId, dateRange, token),
-      fetchSourcesReport(propertyId, dateRange, token),
+    const [reports, websiteUrl] = await Promise.all([
+      fetchPropertyReports(propertyId, days, token),
       fetchWebsiteUrl(propertyId, token),
     ])
 
@@ -370,8 +219,8 @@ async function fetchProperty(
       propertyId,
       displayName,
       websiteUrl,
-      metrics: parseMetricsReport(metricsData),
-      sources: parseSourcesReport(sourcesData),
+      metrics: parseMetricsReport(reports.trend, reports.totals),
+      sources: parseSourcesReport(reports.sources),
       error:   null,
     }
   } catch (err) {
@@ -413,7 +262,6 @@ export default async (request: Request, _context: Context): Promise<Response> =>
   // Parse query params
   const url      = new URL(request.url)
   const days     = parseDaysParam(url)
-  const dateRange = buildDateRange(days)
 
   try {
     // Get the user's Google access token (auto-refreshes if near expiry)
@@ -464,7 +312,7 @@ export default async (request: Request, _context: Context): Promise<Response> =>
 
       const batchResults = await Promise.allSettled(
         batch.map(({ propertyId, displayName }) =>
-          fetchProperty(propertyId, displayName, dateRange, token)
+          fetchProperty(propertyId, displayName, days, token)
         )
       )
 
@@ -509,7 +357,7 @@ export default async (request: Request, _context: Context): Promise<Response> =>
         const retryResults = await Promise.allSettled(
           retryBatch.map(idx => {
             const { propertyId, displayName } = properties[idx]
-            return fetchProperty(propertyId, displayName, dateRange, token)
+            return fetchProperty(propertyId, displayName, days, token)
           })
         )
         for (const [j, result] of retryResults.entries()) {

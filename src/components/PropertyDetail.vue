@@ -10,22 +10,29 @@ import { computed, type DeepReadonly } from 'vue'
 import type { PropertyResult, PropertyDetail } from '../types/analytics'
 import StatBadge from './StatBadge.vue'
 import Sparkline from './Sparkline.vue'
+import DeltaBadge from './DeltaBadge.vue'
 import { formatNumber, formatBounceRate, formatDuration } from '../lib/formatters'
+import { comparablePrevious } from '../lib/compare'
 
 const props = defineProps<{
   property: DeepReadonly<PropertyResult> | PropertyResult
   detail: DeepReadonly<PropertyDetail> | PropertyDetail | null
   isLoading: boolean
   error: string | null
+  /** True while the report for a new date range loads — overview is from the old range. */
+  overviewLoading?: boolean
 }>()
 
-const emit = defineEmits<{ back: [] }>()
+const emit = defineEmits<{ back: []; retry: [] }>()
 
 /** Sessions trend values from daily metrics. */
 const trendData = computed<number[]>(() => {
   if (!props.property.metrics?.trend) return []
   return props.property.metrics.trend.map((d) => d.sessions)
 })
+
+/** Previous-period totals when a comparison is meaningful, else null. */
+const previous = computed(() => comparablePrevious(props.property.metrics?.previous))
 
 /** Top 5 traffic sources. */
 const topSources = computed(() =>
@@ -100,15 +107,30 @@ function getDevicePercentage(sessions: number): number {
 
     <!-- Overview metrics (always available from property.metrics) -->
     <template v-if="property.metrics">
-      <div class="bg-surface-card border border-border rounded-2xl p-5">
+      <div
+        :class="['bg-surface-card border border-border rounded-2xl p-5 transition-opacity', overviewLoading ? 'opacity-40 animate-pulse' : '']"
+        :aria-busy="overviewLoading"
+      >
         <!-- Stats grid: 2 columns x 3 rows -->
         <div class="grid grid-cols-2 gap-x-4 gap-y-3 mb-4">
-          <StatBadge label="Sessions" :value="formatNumber(property.metrics.sessions)" />
-          <StatBadge label="Users" :value="formatNumber(property.metrics.activeUsers)" />
-          <StatBadge label="New Users" :value="formatNumber(property.metrics.newUsers)" />
-          <StatBadge label="Pageviews" :value="formatNumber(property.metrics.screenPageViews)" />
-          <StatBadge label="Bounce Rate" :value="formatBounceRate(property.metrics.bounceRate)" />
-          <StatBadge label="Avg Duration" :value="formatDuration(property.metrics.averageSessionDuration)" />
+          <StatBadge label="Sessions" :value="formatNumber(property.metrics.sessions)">
+            <DeltaBadge :current="property.metrics.sessions" :previous="previous?.sessions" />
+          </StatBadge>
+          <StatBadge label="Users" :value="formatNumber(property.metrics.activeUsers)">
+            <DeltaBadge :current="property.metrics.activeUsers" :previous="previous?.activeUsers" />
+          </StatBadge>
+          <StatBadge label="New Users" :value="formatNumber(property.metrics.newUsers)">
+            <DeltaBadge :current="property.metrics.newUsers" :previous="previous?.newUsers" />
+          </StatBadge>
+          <StatBadge label="Pageviews" :value="formatNumber(property.metrics.screenPageViews)">
+            <DeltaBadge :current="property.metrics.screenPageViews" :previous="previous?.screenPageViews" />
+          </StatBadge>
+          <StatBadge label="Bounce Rate" :value="formatBounceRate(property.metrics.bounceRate)">
+            <DeltaBadge :current="property.metrics.bounceRate" :previous="previous?.bounceRate" mode="points" invert />
+          </StatBadge>
+          <StatBadge label="Avg Duration" :value="formatDuration(property.metrics.averageSessionDuration)">
+            <DeltaBadge :current="property.metrics.averageSessionDuration" :previous="previous?.averageSessionDuration" />
+          </StatBadge>
         </div>
 
         <!-- Sparkline: sessions trend -->
@@ -147,12 +169,20 @@ function getDevicePercentage(sessions: number): number {
     <!-- Error state -->
     <div v-else-if="error" class="bg-surface-card border border-border rounded-2xl p-5">
       <p class="text-sm text-danger mb-3">{{ error }}</p>
-      <button
-        class="text-xs text-accent hover:text-accent/80 transition-colors"
-        @click="emit('back')"
-      >
-        Go back
-      </button>
+      <div class="flex gap-4">
+        <button
+          class="text-xs font-semibold text-accent hover:text-accent/80 transition-colors cursor-pointer"
+          @click="emit('retry')"
+        >
+          Retry
+        </button>
+        <button
+          class="text-xs text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
+          @click="emit('back')"
+        >
+          Go back
+        </button>
+      </div>
     </div>
 
     <!-- Detail data loaded -->

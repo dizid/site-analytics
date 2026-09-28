@@ -7,6 +7,9 @@
 /** 6-hour TTL constant, exported for reuse across composables. */
 export const CACHE_TTL_6H = 6 * 60 * 60 * 1000
 
+/** 24-hour TTL — upper bound for data served stale while revalidating. */
+export const CACHE_TTL_24H = 24 * 60 * 60 * 1000
+
 // ---------------------------------------------------------------------------
 // Internal types
 // ---------------------------------------------------------------------------
@@ -22,6 +25,14 @@ interface CacheEntry<T> {
 // ---------------------------------------------------------------------------
 
 function get<T>(key: string): T | null {
+  return getEntry<T>(key)?.data ?? null
+}
+
+/**
+ * Like `get`, but also returns when the entry was stored, so callers can
+ * decide whether to revalidate in the background (stale-while-revalidate).
+ */
+function getEntry<T>(key: string): { data: T; cachedAt: number } | null {
   const raw = localStorage.getItem(key)
   if (raw === null) return null
 
@@ -50,7 +61,7 @@ function get<T>(key: string): T | null {
     return null
   }
 
-  return entry.data
+  return { data: entry.data, cachedAt: entry.cachedAt }
 }
 
 function set<T>(key: string, data: T, ttlMs: number): void {
@@ -98,11 +109,12 @@ function isStale(key: string): boolean {
 
 export interface Cache {
   get<T>(key: string): T | null
+  getEntry<T>(key: string): { data: T; cachedAt: number } | null
   set<T>(key: string, data: T, ttlMs: number): void
   invalidate(key: string): void
   isStale(key: string): boolean
 }
 
 export function useCache(): Cache {
-  return { get, set, invalidate, isStale }
+  return { get, getEntry, set, invalidate, isStale }
 }

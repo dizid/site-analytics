@@ -16,8 +16,9 @@ Multi-user GA4 analytics dashboard with Google OAuth. Each user sees their own G
 
 ```bash
 npm run dev      # Local dev (Vite + Netlify Functions emulation via @netlify/vite-plugin)
-npm run build    # TypeScript check (vue-tsc) + Vite production build
+npm run build    # TypeScript check (vue-tsc) + Vite production build + blog generation
 npm run preview  # Preview production build locally
+npm run test:run # Vitest unit tests (tests/*.test.ts — GA4 parsing, comparisons, formatters)
 ```
 
 Do NOT use `netlify dev` — the `@netlify/vite-plugin` handles function emulation.
@@ -37,33 +38,39 @@ Do NOT add Vite proxy for `/api` routes — the plugin handles this.
 
 ### Backend (Netlify Functions)
 - `netlify/functions/analytics.mts` — GET /api/analytics — per-user GA4 data with auto-discovery
+- `netlify/functions/analytics-detail.mts` — GET /api/analytics-detail — per-property pages/devices/countries
 - `netlify/functions/oauth-authorize.mts` — GET /api/oauth/authorize — redirect to Google OAuth
 - `netlify/functions/oauth-callback.mts` — GET /api/oauth/callback — exchange code, mint JWT
 - `netlify/functions/oauth-logout.mts` — POST /api/oauth/logout — revoke tokens, cleanup
 - `netlify/functions/lib/auth.ts` — validateSession() (JWT), checkAllowedEmail()
 - `netlify/functions/lib/jwt.ts` — mintSessionJwt(), verifySessionJwt() using jose
 - `netlify/functions/lib/tokens.ts` — Netlify Blobs storage, Google token exchange/refresh
+- `netlify/functions/lib/ga4-report.ts` — pure GA4 helpers: date ranges (current + previous period), batchRunReports request shapes, response parsing
 
 ### Frontend (Vue 3)
-- `src/App.vue` — root component: LoginScreen or Dashboard based on auth state
+- `src/App.vue` — root component: LandingPage or Dashboard based on auth state
 - `src/composables/useAnalyticsData.ts` — main data composable (fetch, cache, sort, view state)
 - `src/composables/useAuth.ts` — OAuth JWT flow, localStorage persistence, user info
 - `src/composables/useCache.ts` — generic localStorage TTL cache
 - `src/composables/useDateRange.ts` — reactive 7d/30d/90d selection
 - `src/lib/api.ts` — fetch wrapper with Bearer token + typed API methods
 - `src/lib/formatters.ts` — number, bounce rate, duration formatting
+- `src/lib/compare.ts` — period-over-period deltas (% / percentage points), portfolio aggregation
 - `src/types/analytics.ts` — all shared TypeScript interfaces (incl. UserInfo)
 
 ### Components
+- `LandingPage.vue` — signed-out marketing page (replaced the old LoginScreen)
 - `SiteCard.vue` — glass morphism card per property
 - `SiteTable.vue` — dense sortable table view
+- `AggregateKPIs.vue` — portfolio-wide totals above the property list
+- `PropertyDetail.vue` — single-property breakdown (pages, devices, countries)
 - `DashboardHeader.vue` — title, date pills, view toggle, refresh, user avatar + logout
 - `DateRangePicker.vue` — 7d / 30d / 90d pill selector
 - `Sparkline.vue` — SVG trend line
 - `StatBadge.vue` — single metric display
-- `LoginScreen.vue` — Google sign-in button (glass morphism)
 - `LoadingSkeleton.vue` — pulse skeleton cards during loading
 - `ErrorBanner.vue` — error display with retry button
+- `AppFooter.vue` — footer with privacy/terms links
 
 ## Environment Variables
 
@@ -81,6 +88,7 @@ ALLOWED_EMAILS        # Comma-separated email allowlist (empty = allow all authe
 - `GET /api/oauth/callback?code=&state=` — exchanges code, stores tokens, mints JWT, redirects to `/#token=<jwt>`
 - `POST /api/oauth/logout` — header `Authorization: Bearer <jwt>`, revokes tokens
 - `GET /api/analytics?days=7d|30d|90d` — header `Authorization: Bearer <jwt>`, returns ReportResponse
+- `GET /api/analytics-detail?property=<id>&days=7d|30d|90d` — header `Authorization: Bearer <jwt>`, returns DetailResponse (top 10 pages, device breakdown, top 10 countries). `property` is required — a missing param returns 400.
 
 ## Conventions
 
@@ -114,8 +122,8 @@ ALLOWED_EMAILS        # Comma-separated email allowlist (empty = allow all authe
 3. Refreshes Google access token if expired (5-min buffer)
 4. Auto-discovers user's GA4 properties via Admin API (accountSummaries)
 5. Fans out REST requests to GA4 runReport per property (batches of 10)
-6. Each property gets two reports: metrics+trend and traffic sources
-7. Response cached in localStorage with 6h TTL (namespaced by user ID)
+6. Each property gets ONE batchRunReports call with 3 reports: daily trend, totals (current + previous period, no dimensions), top-5 traffic sources. Headline numbers come from the totals report — never sum activeUsers across days (users aren't additive)
+7. Response cached in localStorage (namespaced by user ID, versioned prefix `ga4:v3` — bump when the data shape/meaning changes). Stale-while-revalidate: <1h old and same day = fresh; otherwise shown immediately and refetched in the background; hard expiry 24h
 
 ## GCP Setup
 

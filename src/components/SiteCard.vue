@@ -9,6 +9,8 @@ import { computed } from 'vue'
 import type { PropertyResult } from '../types/analytics'
 import { formatNumber, formatBounceRate, formatDuration } from '../lib/formatters'
 import Sparkline from './Sparkline.vue'
+import DeltaBadge from './DeltaBadge.vue'
+import { comparablePrevious } from '../lib/compare'
 
 const props = defineProps<{
   property: PropertyResult
@@ -53,6 +55,9 @@ const trendData = computed<number[]>(() => {
   if (!props.property.metrics?.trend) return []
   return props.property.metrics.trend.map((d) => d.sessions)
 })
+
+/** Previous-period totals when a comparison is meaningful, else null. */
+const previous = computed(() => comparablePrevious(props.property.metrics?.previous))
 
 /** True when the property has a hard error and no metric data. */
 const hasError = computed(() => Boolean(props.property.error))
@@ -109,19 +114,31 @@ const hasError = computed(() => Boolean(props.property.error))
       <div class="grid grid-cols-2 gap-2">
         <div class="bg-white/[0.03] p-2.5 rounded-lg">
           <p class="text-[10px] text-text-muted font-semibold uppercase mb-0.5">Users</p>
-          <span class="text-base font-bold tabular-nums">{{ formatNumber(property.metrics.activeUsers) }}</span>
+          <div class="flex items-baseline gap-1.5 flex-wrap">
+            <span class="text-base font-bold tabular-nums">{{ formatNumber(property.metrics.activeUsers) }}</span>
+            <DeltaBadge :current="property.metrics.activeUsers" :previous="previous?.activeUsers" />
+          </div>
         </div>
         <div class="bg-white/[0.03] p-2.5 rounded-lg">
           <p class="text-[10px] text-text-muted font-semibold uppercase mb-0.5">Sessions</p>
-          <span class="text-base font-bold tabular-nums">{{ formatNumber(property.metrics.sessions) }}</span>
+          <div class="flex items-baseline gap-1.5 flex-wrap">
+            <span class="text-base font-bold tabular-nums">{{ formatNumber(property.metrics.sessions) }}</span>
+            <DeltaBadge :current="property.metrics.sessions" :previous="previous?.sessions" />
+          </div>
         </div>
         <div class="bg-white/[0.03] p-2.5 rounded-lg">
           <p class="text-[10px] text-text-muted font-semibold uppercase mb-0.5">Bounce Rate</p>
-          <span class="text-base font-bold tabular-nums">{{ formatBounceRate(property.metrics.bounceRate) }}</span>
+          <div class="flex items-baseline gap-1.5 flex-wrap">
+            <span class="text-base font-bold tabular-nums">{{ formatBounceRate(property.metrics.bounceRate) }}</span>
+            <DeltaBadge :current="property.metrics.bounceRate" :previous="previous?.bounceRate" mode="points" invert />
+          </div>
         </div>
         <div class="bg-white/[0.03] p-2.5 rounded-lg">
           <p class="text-[10px] text-text-muted font-semibold uppercase mb-0.5">Avg Duration</p>
-          <span class="text-base font-bold tabular-nums">{{ formatDuration(property.metrics.averageSessionDuration) }}</span>
+          <div class="flex items-baseline gap-1.5 flex-wrap">
+            <span class="text-base font-bold tabular-nums">{{ formatDuration(property.metrics.averageSessionDuration) }}</span>
+            <DeltaBadge :current="property.metrics.averageSessionDuration" :previous="previous?.averageSessionDuration" />
+          </div>
         </div>
       </div>
     </template>

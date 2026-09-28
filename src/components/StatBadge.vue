@@ -24,6 +24,9 @@ defineProps<{
         {{ value }}
       </span>
 
+      <!-- Optional extra content after the value (e.g. a DeltaBadge) -->
+      <slot />
+
       <!-- Up trend: green arrow -->
       <svg
         v-if="trend === 'up'"

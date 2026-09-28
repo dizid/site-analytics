@@ -17,13 +17,19 @@ export interface TrafficSource {
   sessions: number
 }
 
-export interface PropertyMetrics {
+/** Headline metrics for one period. */
+export interface PeriodTotals {
   sessions: number
   activeUsers: number
   newUsers: number
   screenPageViews: number
   bounceRate: number
   averageSessionDuration: number
+}
+
+export interface PropertyMetrics extends PeriodTotals {
+  /** Same metrics for the equally long period before this one (for % change). */
+  previous?: PeriodTotals
   trend: DailyMetric[]
 }
 
