@@ -33,10 +33,19 @@ export interface PropertyMetrics extends PeriodTotals {
   trend: DailyMetric[]
 }
 
+/** Where a property's numbers come from. */
+export type DataSource = 'ga4' | 'cloudflare'
+
 export interface PropertyResult {
   propertyId: string
   displayName: string
   websiteUrl?: string
+  /**
+   * Missing = 'ga4'. Cloudflare sites only have real values for sessions
+   * (= visits) and screenPageViews (= pageviews); their other metrics are 0
+   * placeholders — check hasMetric() (src/lib/sources.ts) before showing one.
+   */
+  source?: DataSource
   metrics: PropertyMetrics | null
   sources: TrafficSource[]
   error: string | null
@@ -46,6 +55,12 @@ export interface ReportResponse {
   generatedAt: string
   dateRange: DateRange
   properties: PropertyResult[]
+}
+
+/** GET /api/cloudflare — Cloudflare Web Analytics sites as PropertyResults. */
+export interface CloudflareReportResponse extends ReportResponse {
+  /** One-line setup/status hint, only ever sent to the Cloudflare owner. */
+  notice?: string | null
 }
 
 export interface PropertyInfo {
@@ -62,7 +77,14 @@ export interface UserInfo {
 export interface PageStats {
   pagePath: string
   pageviews: number
-  bounceRate: number
+  /** GA4 only — Cloudflare has no bounce rate. */
+  bounceRate?: number
+}
+
+/** Cloudflare only: visits per referring host ("(direct)" = no referrer). */
+export interface ReferrerStats {
+  referrer: string
+  sessions: number
 }
 
 export interface DeviceBreakdown {
@@ -80,6 +102,8 @@ export interface PropertyDetail {
   pages: PageStats[]
   devices: DeviceBreakdown[]
   countries: CountryStats[]
+  /** Cloudflare only (GA4 shows channels from the overview instead). */
+  referrers?: ReferrerStats[]
 }
 
 export interface DetailResponse {

@@ -5,7 +5,12 @@
  */
 
 import { useAuth } from '../composables/useAuth'
-import type { DateRange, ReportResponse, DetailResponse } from '../types/analytics'
+import type {
+  DateRange,
+  ReportResponse,
+  DetailResponse,
+  CloudflareReportResponse,
+} from '../types/analytics'
 
 // ---------------------------------------------------------------------------
 // Core fetch wrapper
@@ -60,6 +65,21 @@ export const api = {
   getPropertyDetail(propertyId: string, days: DateRange): Promise<DetailResponse> {
     return apiFetch<DetailResponse>(
       `/api/analytics-detail?property=${encodeURIComponent(propertyId)}&days=${days}`
+    )
+  },
+
+  /**
+   * Cloudflare Web Analytics sites. Empty list (never an error) for anyone
+   * but the Cloudflare owner.
+   */
+  getCloudflareReport(days: DateRange): Promise<CloudflareReportResponse> {
+    return apiFetch<CloudflareReportResponse>(`/api/cloudflare?days=${days}`)
+  },
+
+  /** Breakdowns for one Cloudflare site; propertyId is "cloudflare:<siteTag>". */
+  getCloudflareDetail(propertyId: string, days: DateRange): Promise<DetailResponse> {
+    return apiFetch<DetailResponse>(
+      `/api/cloudflare?site=${encodeURIComponent(propertyId)}&days=${days}`
     )
   },
 }

@@ -10,13 +10,21 @@ import PropertyDetail from './components/PropertyDetail.vue'
 import LoadingSkeleton from './components/LoadingSkeleton.vue'
 import ErrorBanner from './components/ErrorBanner.vue'
 import AggregateKPIs from './components/AggregateKPIs.vue'
+import CloudflareKPIs from './components/CloudflareKPIs.vue'
 import AppFooter from './components/AppFooter.vue'
 
 const { isAuthenticated, isLoading: authLoading, user, logout } = useAuth()
 const {
+  properties,
   sortedProperties,
+  pairStarts,
   isLoading,
   isRefreshing,
+  isCfLoading,
+  cfNotice,
+  showSource,
+  cfTotals,
+  cfPreviousTotals,
   error,
   lastFetchedAt,
   viewMode,
@@ -66,7 +74,7 @@ watch(isAuthenticated, (auth) => {
     <DashboardHeader
       :last-fetched-at="lastFetchedAt"
       :view-mode="viewMode"
-      :is-loading="isLoading || isRefreshing"
+      :is-loading="isLoading || isRefreshing || isCfLoading"
       :user="user"
       :success-count="successCount"
       :show-home="!!selectedProperty"
@@ -83,7 +91,7 @@ watch(isAuthenticated, (auth) => {
       <ErrorBanner
         v-if="error"
         class="mb-4"
-        :message="sortedProperties.length > 0 || selectedProperty
+        :message="properties.length > 0 || selectedProperty
           ? `${error} — showing previously loaded data.`
           : error"
         @retry="refresh"
@@ -97,13 +105,15 @@ watch(isAuthenticated, (auth) => {
         :is-loading="isDetailLoading"
         :error="detailError"
         :overview-loading="isLoading"
+        :show-source="showSource"
         @back="deselectProperty"
         @retry="retryDetail"
       />
 
       <!-- List view: all properties -->
       <template v-else>
-        <!-- Aggregate KPIs -->
+        <!-- Aggregate KPIs — GA4 and Cloudflare totals in separate rows, never mixed -->
+        <p v-if="cfTotals" class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2">Google Analytics</p>
         <AggregateKPIs
           :total-sessions="totalSessions"
           :total-users="totalUsers"
@@ -112,6 +122,14 @@ watch(isAuthenticated, (auth) => {
           :previous="previousAggregate"
           :is-loading="isLoading"
         />
+
+        <template v-if="cfTotals">
+          <p class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2">Cloudflare</p>
+          <CloudflareKPIs :totals="cfTotals" :previous="cfPreviousTotals" />
+        </template>
+
+        <!-- Cloudflare setup/status hint (owner only) -->
+        <p v-if="cfNotice" class="text-xs text-text-muted mb-4">{{ cfNotice }}</p>
 
         <!-- Loading skeletons -->
         <div v-if="isLoading && sortedProperties.length === 0" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -123,8 +141,10 @@ watch(isAuthenticated, (auth) => {
           <SiteCard
             v-for="(property, i) in sortedProperties"
             :key="property.propertyId"
+            :class="{ 'sm:col-start-1': pairStarts.has(property.propertyId) }"
             :property="property"
             :index="i"
+            :show-source="showSource"
             @select="selectProperty"
           />
         </div>
@@ -135,6 +155,7 @@ watch(isAuthenticated, (auth) => {
           :properties="sortedProperties"
           :sort-column="sortColumn"
           :sort-direction="sortDirection"
+          :show-source="showSource"
           @sort="setSortColumn"
           @select="selectProperty"
         />

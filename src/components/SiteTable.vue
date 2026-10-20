@@ -7,12 +7,16 @@
 
 import type { PropertyResult, SortColumn, SortDirection } from '../types/analytics'
 import { formatNumber } from '../lib/formatters'
+import { displayMetric } from '../lib/sources'
 import Sparkline from './Sparkline.vue'
+import SourceBadge from './SourceBadge.vue'
 
 const props = defineProps<{
   properties: PropertyResult[]
   sortColumn: SortColumn
   sortDirection: SortDirection
+  /** Show the GA4 / Cloudflare badge (only when both sources are listed). */
+  showSource?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -46,7 +50,10 @@ function getTrendData(property: PropertyResult): number[] {
           </svg>
         </div>
         <div class="min-w-0">
-          <h3 class="text-sm font-semibold truncate">{{ property.displayName }}</h3>
+          <div class="flex items-center gap-1.5 min-w-0">
+            <h3 class="text-sm font-semibold truncate">{{ property.displayName }}</h3>
+            <SourceBadge v-if="showSource" :source="property.source" />
+          </div>
           <p class="text-[10px] text-text-muted uppercase tracking-wider truncate">
             {{ property.websiteUrl || property.propertyId }}
           </p>
@@ -64,11 +71,11 @@ function getTrendData(property: PropertyResult): number[] {
       <template v-else>
         <div class="flex items-center gap-4 shrink-0 ml-3">
           <div class="text-right hidden sm:block">
-            <p class="text-sm font-bold tabular-nums">{{ formatNumber(property.metrics.activeUsers) }}</p>
+            <p class="text-sm font-bold tabular-nums">{{ displayMetric(property, 'activeUsers', formatNumber) }}</p>
             <p class="text-[10px] text-text-muted">users</p>
           </div>
           <div class="text-right">
-            <p class="text-sm font-bold tabular-nums">{{ formatNumber(property.metrics.sessions) }}</p>
+            <p class="text-sm font-bold tabular-nums">{{ displayMetric(property, 'sessions', formatNumber) }}</p>
             <p class="text-[10px] text-text-muted">sessions</p>
           </div>
           <div class="w-12 h-6">

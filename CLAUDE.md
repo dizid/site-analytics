@@ -18,7 +18,7 @@ Multi-user GA4 analytics dashboard with Google OAuth. Each user sees their own G
 npm run dev      # Local dev (Vite + Netlify Functions emulation via @netlify/vite-plugin)
 npm run build    # TypeScript check (vue-tsc) + Vite production build + blog generation
 npm run preview  # Preview production build locally
-npm run test:run # Vitest unit tests (tests/*.test.ts — GA4 parsing, comparisons, formatters)
+npm run test:run # Vitest unit tests (tests/*.test.ts — GA4 + Cloudflare parsing, source mixing, comparisons, formatters)
 ```
 
 Do NOT use `netlify dev` — the `@netlify/vite-plugin` handles function emulation.
@@ -33,6 +33,7 @@ Do NOT add Vite proxy for `/api` routes — the plugin handles this.
 - **No gRPC** — REST fetch to GA4 Data API (keeps bundle < 50MB Netlify limit)
 - **Google OAuth** — authorization code flow with `analytics.readonly` scope
 - **Per-user GA4 access** — each user's own Google credentials, properties auto-discovered
+- **Cloudflare Web Analytics (optional, owner-only)** — Marc's own Cloudflare account, shown next to GA4 with a source badge. Only `CF_OWNER_EMAIL` gets data; everyone else gets an empty list (dashboard stays GA4-only). REST site list + ONE GraphQL call (`rumPageloadEventsAdaptiveGroups`) for all sites
 
 ## Key Files
 
@@ -46,6 +47,8 @@ Do NOT add Vite proxy for `/api` routes — the plugin handles this.
 - `netlify/functions/lib/jwt.ts` — mintSessionJwt(), verifySessionJwt() using jose
 - `netlify/functions/lib/tokens.ts` — Netlify Blobs storage, Google token exchange/refresh
 - `netlify/functions/lib/ga4-report.ts` — pure GA4 helpers: date ranges (current + previous period), batchRunReports request shapes, response parsing
+- `netlify/functions/cloudflare.mts` — GET /api/cloudflare — Cloudflare Web Analytics overview, or one site's detail with `?site=`
+- `netlify/functions/lib/cf-report.ts` — pure Cloudflare helpers: UTC date ranges, owner check, GraphQL queries, response parsing
 
 ### Frontend (Vue 3)
 - `src/App.vue` — root component: LandingPage or Dashboard based on auth state
@@ -56,13 +59,16 @@ Do NOT add Vite proxy for `/api` routes — the plugin handles this.
 - `src/lib/api.ts` — fetch wrapper with Bearer token + typed API methods
 - `src/lib/formatters.ts` — number, bounce rate, duration formatting
 - `src/lib/compare.ts` — period-over-period deltas (% / percentage points), portfolio aggregation
+- `src/lib/sources.ts` — GA4/Cloudflare mixing: which metrics a source measures (`hasMetric`, "–" display), hostname pairing
 - `src/types/analytics.ts` — all shared TypeScript interfaces (incl. UserInfo)
 
 ### Components
 - `LandingPage.vue` — signed-out marketing page (replaced the old LoginScreen)
 - `SiteCard.vue` — glass morphism card per property
 - `SiteTable.vue` — dense sortable table view
-- `AggregateKPIs.vue` — portfolio-wide totals above the property list
+- `AggregateKPIs.vue` — portfolio-wide totals above the property list (GA4 only)
+- `CloudflareKPIs.vue` — separate totals row for Cloudflare sites (sessions = visits, pageviews)
+- `SourceBadge.vue` — "GA4" / "Cloudflare" label, only shown when Cloudflare sites are in the list
 - `PropertyDetail.vue` — single-property breakdown (pages, devices, countries)
 - `DashboardHeader.vue` — title, date pills, view toggle, refresh, user avatar + logout
 - `DateRangePicker.vue` — 7d / 30d / 90d pill selector
@@ -80,7 +86,14 @@ GOOGLE_CLIENT_SECRET  # Google OAuth 2.0 client secret
 JWT_SECRET            # Random 64-char hex string (openssl rand -hex 32)
 SITE_URL              # Base URL, no trailing slash (e.g. https://statpilot.mom)
 ALLOWED_EMAILS        # Comma-separated email allowlist (empty = allow all authenticated users)
+
+# Optional — Cloudflare Web Analytics (server-side only, never in the client bundle)
+CLOUDFLARE_API_TOKEN  # Token with Account Analytics: Read (+ Account Settings: Read to list sites without traffic)
+CLOUDFLARE_ACCOUNT_ID # Cloudflare account that owns the Web Analytics sites
+CF_OWNER_EMAIL        # The only email that sees Cloudflare data; unset = nobody
 ```
+
+Unset token/account ID → dashboard is exactly GA4-only, plus a one-line hint for the owner.
 
 ## API Endpoints
 
@@ -89,6 +102,17 @@ ALLOWED_EMAILS        # Comma-separated email allowlist (empty = allow all authe
 - `POST /api/oauth/logout` — header `Authorization: Bearer <jwt>`, revokes tokens
 - `GET /api/analytics?days=7d|30d|90d` — header `Authorization: Bearer <jwt>`, returns ReportResponse
 - `GET /api/analytics-detail?property=<id>&days=7d|30d|90d` — header `Authorization: Bearer <jwt>`, returns DetailResponse (top 10 pages, device breakdown, top 10 countries). `property` is required — a missing param returns 400.
+- `GET /api/cloudflare?days=7d|30d|90d` — header `Authorization: Bearer <jwt>`, returns CloudflareReportResponse (PropertyResults with `source: 'cloudflare'`, id `cloudflare:<siteTag>`, plus an owner-only `notice`). Non-owners: 200 with an empty list
+- `GET /api/cloudflare?site=cloudflare:<siteTag>&days=…` — DetailResponse for one site (pages, referrers, countries, devices). Non-owner 404, bad site 400
+
+## Cloudflare Web Analytics
+
+- Dataset `rumPageloadEventsAdaptiveGroups`: `count` = pageviews, `sum.visits` = visits. Filter `bot: 0`, UTC dates, ranges end yesterday like GA4
+- Mapping onto the shared columns: visits → `sessions`, pageviews → `screenPageViews`. The GA4-only metrics are 0 placeholders — always go through `hasMetric()` / `displayMetric()` in `src/lib/sources.ts` (shows "–")
+- Account limits (GraphQL `settings` node): max 93 days per query node, 184 days retention → current and previous period are separate aliased nodes
+- Site list `GET /accounts/{id}/rum/site_info/list` needs **Account Settings: Read**. The current token only has Account Analytics: Read, so it returns 403 and the function falls back to sites seen in the traffic data (sites with zero traffic in both periods don't show)
+- Same hostname on GA4 + Cloudflare → `pairByHost()` puts them next to each other (GA4 first); in the card grid `pairStartIds()` starts a new row so the pair sits side by side. Never summed
+- Frontend: separate list + cache key `ga4:v3:cf:<userId>:<range>`; a Cloudflare failure only sets the one-line notice, never the GA4 error banner
 
 ## Conventions
 
@@ -144,3 +168,4 @@ ALLOWED_EMAILS        # Comma-separated email allowlist (empty = allow all authe
 - Netlify site: `ga-analytics-app` (ID: `2290a935-eef6-4cee-8611-eaed351f9ffa`)
 - GitHub repo: `https://github.com/dizid/site-analytics.git`
 - Local dev port: `5173` (Vite default)
+- Cloudflare account ID: `1a3afa040196e3ae86cb84c0ef5c5dee` (`CLOUDFLARE_API_TOKEN` is a user API token, set in Netlify 2026-10-20; copy in gitignored `dev.md`)

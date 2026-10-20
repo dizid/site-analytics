@@ -5,6 +5,10 @@
  *
  * Cache keys are namespaced by user ID so different Google accounts never
  * see each other's cached data: `ga4:<userId>:<dateRange>`.
+ *
+ * Cloudflare Web Analytics sites are fetched and cached separately
+ * (`ga4:v3:cf:<userId>:<dateRange>`) so a Cloudflare failure never touches
+ * the GA4 data, and GA4 totals stay GA4-only. Both are merged for the list.
  */
 
 import { ref, computed, watch, readonly } from 'vue'
@@ -22,6 +26,7 @@ import { useCache, CACHE_TTL_6H, CACHE_TTL_24H } from './useCache'
 import { useDateRange } from './useDateRange'
 import { useAuth } from './useAuth'
 import { aggregateTotals, comparablePrevious } from '../lib/compare'
+import { metricOrNull, pairByHost, pairStartIds, sourceOf } from '../lib/sources'
 
 const VIEWMODE_STORAGE_KEY = 'ga4:viewMode'
 
@@ -40,6 +45,12 @@ const isLoading = ref(false)
 const isRefreshing = ref(false)
 const error = ref<string | null>(null)
 const lastFetchedAt = ref<string | null>(null)
+
+// Cloudflare sites — always empty for anyone but the Cloudflare owner
+const cfProperties = ref<PropertyResult[]>([])
+// One-line setup/error hint for the owner (missing env vars, API failure)
+const cfNotice = ref<string | null>(null)
+const isCfLoading = ref(false)
 
 // Restore persisted view mode from localStorage, default to 'cards'
 const storedViewMode = localStorage.getItem(VIEWMODE_STORAGE_KEY)
@@ -77,6 +88,12 @@ function getCacheKey(): string {
   return userId ? `${CACHE_PREFIX}:${userId}:${dateRange.value}` : `${CACHE_PREFIX}:${dateRange.value}`
 }
 
+/** Same as getCacheKey, for the Cloudflare report. */
+function getCfCacheKey(): string {
+  const userId = getUserId()
+  return userId ? `${CACHE_PREFIX}:cf:${userId}:${dateRange.value}` : `${CACHE_PREFIX}:cf:${dateRange.value}`
+}
+
 /**
  * On first use, remove any legacy un-namespaced cache entries from the old
  * password-auth system (e.g. `ga4:7d`, `ga4:30d`, `ga4:90d`) so they don't
@@ -91,8 +108,14 @@ function cleanLegacyCacheKeys(): void {
 // Computed
 // ---------------------------------------------------------------------------
 
+// GA4 properties + Cloudflare sites, as shown in the list
+const allProperties: ComputedRef<PropertyResult[]> = computed(() => [
+  ...properties.value,
+  ...cfProperties.value,
+])
+
 const sortedProperties: ComputedRef<PropertyResult[]> = computed(() => {
-  return [...properties.value].sort((a, b) => {
+  const sorted = [...allProperties.value].sort((a, b) => {
     const col = sortColumn.value
     const dir = sortDirection.value === 'asc' ? 1 : -1
 
@@ -101,9 +124,10 @@ const sortedProperties: ComputedRef<PropertyResult[]> = computed(() => {
       return a.displayName.localeCompare(b.displayName) * dir
     }
 
-    // Metric sort — null metrics (errored properties) always go to the bottom
-    const aVal = a.metrics?.[col] ?? null
-    const bVal = b.metrics?.[col] ?? null
+    // Metric sort — null metrics (errored properties, or metrics the source
+    // doesn't measure, e.g. users on Cloudflare) always go to the bottom
+    const aVal = metricOrNull(a, col)
+    const bVal = metricOrNull(b, col)
 
     if (aVal === null && bVal === null) return 0
     if (aVal === null) return 1   // a sinks to bottom regardless of direction
@@ -111,11 +135,20 @@ const sortedProperties: ComputedRef<PropertyResult[]> = computed(() => {
 
     return (aVal - bVal) * dir
   })
+
+  // Same hostname on GA4 and Cloudflare (mid-migration) → show them side by side
+  return pairByHost(sorted)
 })
 
+// First card of each GA4 + Cloudflare pair — the card grid starts a new row there
+const pairStarts: ComputedRef<Set<string>> = computed(() => pairStartIds(sortedProperties.value))
+
 const successCount: ComputedRef<number> = computed(
-  () => properties.value.filter((p) => p.metrics !== null).length,
+  () => allProperties.value.filter((p) => p.metrics !== null).length,
 )
+
+// Source badges only matter once Cloudflare sites are mixed into the list
+const showSource: ComputedRef<boolean> = computed(() => cfProperties.value.length > 0)
 
 const errorCount: ComputedRef<number> = computed(
   () => properties.value.filter((p) => p.error !== null).length,
@@ -148,15 +181,32 @@ const avgDuration: ComputedRef<number> = computed(() => {
   return valid.reduce((s, p) => s + (p.metrics!.averageSessionDuration * p.metrics!.sessions), 0) / sessions
 })
 
-// Portfolio totals for the previous period, for % change on the KPIs.
-// Null unless every loaded property has previous-period data to compare.
-const previousAggregate: ComputedRef<PeriodTotals | null> = computed(() => {
-  const previous = properties.value
+/**
+ * Portfolio totals for the previous period, for % change on the KPIs.
+ * Null unless every loaded property has previous-period data to compare.
+ */
+function previousTotalsOf(list: PropertyResult[]): PeriodTotals | null {
+  const previous = list
     .filter((p) => p.metrics)
     .map((p) => p.metrics!.previous)
   if (previous.length === 0 || previous.some((p) => !p)) return null
   return comparablePrevious(aggregateTotals(previous as PeriodTotals[]))
+}
+
+const previousAggregate: ComputedRef<PeriodTotals | null> = computed(() =>
+  previousTotalsOf(properties.value),
+)
+
+// Cloudflare totals — kept apart from the GA4 KPIs, never mixed.
+// Only sessions (= visits) and screenPageViews (= pageviews) are meaningful.
+const cfTotals: ComputedRef<PeriodTotals | null> = computed(() => {
+  const loaded = cfProperties.value.filter((p) => p.metrics).map((p) => p.metrics!)
+  return loaded.length > 0 ? aggregateTotals(loaded) : null
 })
+
+const cfPreviousTotals: ComputedRef<PeriodTotals | null> = computed(() =>
+  previousTotalsOf(cfProperties.value),
+)
 
 // ---------------------------------------------------------------------------
 // Actions
@@ -184,11 +234,12 @@ function isFresh(cachedAt: number): boolean {
 function syncSelectedProperty(): void {
   const current = selectedProperty.value
   if (!current) return
-  const fresh = properties.value.find((p) => p.propertyId === current.propertyId)
+  const fresh = allProperties.value.find((p) => p.propertyId === current.propertyId)
   if (fresh) selectedProperty.value = fresh
 }
 
 type CachedReport = { properties: PropertyResult[]; generatedAt: string }
+type CachedCfReport = { properties: PropertyResult[]; notice: string | null }
 
 /**
  * Loads the report for the current date range (stale-while-revalidate):
@@ -198,7 +249,7 @@ type CachedReport = { properties: PropertyResult[]; generatedAt: string }
  *                  numbers under the new range's label) and fetch
  * - force        → keep current data visible, fetch with loading state
  */
-async function fetchReport(force = false): Promise<void> {
+async function fetchGa4Report(force = false): Promise<void> {
   // Remove old un-namespaced cache entries from the password-auth era
   cleanLegacyCacheKeys()
 
@@ -269,6 +320,65 @@ async function fetchReport(force = false): Promise<void> {
   }
 }
 
+// Separate counter: GA4 and Cloudflare requests don't supersede each other
+let cfFetchId = 0
+
+/**
+ * Loads the Cloudflare sites for the current date range, with the same
+ * stale-while-revalidate rules as the GA4 report. Failures only set the
+ * one-line notice — they never raise the GA4 error banner. Only the owner
+ * can get an error (everyone else gets an empty list from the server).
+ */
+async function fetchCloudflareReport(force = false): Promise<void> {
+  const cacheKey = getCfCacheKey()
+  const myFetchId = ++cfFetchId
+
+  if (!force) {
+    const cached = cache.getEntry<CachedCfReport>(cacheKey)
+    if (cached !== null) {
+      cfProperties.value = cached.data.properties
+      cfNotice.value = cached.data.notice
+      syncSelectedProperty()
+      if (isFresh(cached.cachedAt)) {
+        isCfLoading.value = false
+        return
+      }
+    } else {
+      cfProperties.value = []
+    }
+  }
+
+  isCfLoading.value = true
+
+  try {
+    const response = await api.getCloudflareReport(dateRange.value)
+    const entry: CachedCfReport = {
+      properties: response.properties,
+      notice: response.notice ?? null,
+    }
+
+    // Cache even if superseded — the key belongs to the range it was fetched for
+    cache.set(cacheKey, entry, CACHE_TTL_24H)
+
+    if (myFetchId !== cfFetchId) return
+
+    cfProperties.value = entry.properties
+    cfNotice.value = entry.notice
+    syncSelectedProperty()
+  } catch (err) {
+    if (myFetchId !== cfFetchId) return
+    const message = err instanceof Error ? err.message : 'request failed'
+    cfNotice.value = message.startsWith('Cloudflare') ? message : `Cloudflare: ${message}`
+  } finally {
+    if (myFetchId === cfFetchId) isCfLoading.value = false
+  }
+}
+
+/** Loads GA4 and Cloudflare in parallel; each handles its own errors. */
+async function fetchReport(force = false): Promise<void> {
+  await Promise.all([fetchGa4Report(force), fetchCloudflareReport(force)])
+}
+
 function setViewMode(mode: ViewMode): void {
   viewMode.value = mode
   localStorage.setItem(VIEWMODE_STORAGE_KEY, mode)
@@ -310,7 +420,9 @@ async function selectProperty(property: PropertyResult): Promise<void> {
   }
 
   try {
-    const response = await api.getPropertyDetail(property.propertyId, dateRange.value)
+    const response = sourceOf(property) === 'cloudflare'
+      ? await api.getCloudflareDetail(property.propertyId, dateRange.value)
+      : await api.getPropertyDetail(property.propertyId, dateRange.value)
     cache.set(cacheKey, response.detail, CACHE_TTL_6H)
     if (myDetailFetchId !== detailFetchId) return
     propertyDetail.value = response.detail
@@ -364,8 +476,13 @@ export function useAnalyticsData() {
     sortColumn: readonly(sortColumn),
     sortDirection: readonly(sortDirection),
 
+    // Cloudflare state
+    cfNotice: readonly(cfNotice),
+    isCfLoading: readonly(isCfLoading),
+
     // Computed
     sortedProperties,
+    pairStarts,
     successCount,
     errorCount,
     totalSessions,
@@ -373,6 +490,9 @@ export function useAnalyticsData() {
     avgBounceRate: readonly(avgBounceRate),
     avgDuration: readonly(avgDuration),
     previousAggregate,
+    showSource,
+    cfTotals,
+    cfPreviousTotals,
 
     // Detail view state
     selectedProperty: readonly(selectedProperty),

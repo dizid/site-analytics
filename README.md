@@ -113,6 +113,21 @@ Opens at `http://localhost:8888`. The `@netlify/vite-plugin` emulates Netlify Fu
 3. Set the 5 environment variables in Netlify dashboard (Site settings → Environment variables)
 4. Deploy — build command and publish directory are configured in `netlify.toml`
 
+### Optional: Cloudflare Web Analytics
+
+Cloudflare Web Analytics sites can be shown next to the GA4 properties, with a "GA4" / "Cloudflare" source badge. The data comes from one Cloudflare account, so only `CF_OWNER_EMAIL` sees it; every other user gets the normal GA4-only dashboard. Leave the variables unset to turn it off.
+
+| Variable | Description |
+|----------|-------------|
+| `CLOUDFLARE_API_TOKEN` | API token with **Account → Account Analytics → Read**. Add **Account → Account Settings → Read** to also list sites that have no traffic yet. Server-side only |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID |
+| `CF_OWNER_EMAIL` | The Google account email allowed to see the Cloudflare data |
+
+- `GET /api/cloudflare?days=7d|30d|90d` (`Authorization: Bearer <jwt>`): all sites, with current + previous period and a daily trend
+- `GET /api/cloudflare?site=<id>&days=7d|30d|90d`: one site's top pages, referrers, countries and devices
+- Cloudflare visits are shown as sessions, pageviews as pageviews; users, new users, bounce rate and duration show "–". GA4 and Cloudflare totals are kept in separate KPI rows, and a hostname that exists in both is shown as a side-by-side pair (never summed)
+- When the owner is signed in and a variable is missing, the dashboard shows a one-line hint
+
 ## Commands
 
 ```bash

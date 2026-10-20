@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /**
  * PropertyDetail.vue
- * Master-detail view for a single GA4 property.
+ * Master-detail view for a single GA4 property or Cloudflare site.
  * Shows overview metrics (from property) plus detailed breakdowns
- * (pages, devices, countries) fetched on demand.
+ * (pages, devices, countries; referrers for Cloudflare) fetched on demand.
  */
 
 import { computed, type DeepReadonly } from 'vue'
@@ -11,8 +11,10 @@ import type { PropertyResult, PropertyDetail } from '../types/analytics'
 import StatBadge from './StatBadge.vue'
 import Sparkline from './Sparkline.vue'
 import DeltaBadge from './DeltaBadge.vue'
+import SourceBadge from './SourceBadge.vue'
 import { formatNumber, formatBounceRate, formatDuration } from '../lib/formatters'
 import { comparablePrevious } from '../lib/compare'
+import { displayMetric, hasMetric, sourceOf, type MetricKey } from '../lib/sources'
 
 const props = defineProps<{
   property: DeepReadonly<PropertyResult> | PropertyResult
@@ -21,9 +23,13 @@ const props = defineProps<{
   error: string | null
   /** True while the report for a new date range loads — overview is from the old range. */
   overviewLoading?: boolean
+  /** Show the GA4 / Cloudflare badge (only when both sources are listed). */
+  showSource?: boolean
 }>()
 
 const emit = defineEmits<{ back: []; retry: [] }>()
+
+const isCloudflare = computed(() => sourceOf(props.property) === 'cloudflare')
 
 /** Sessions trend values from daily metrics. */
 const trendData = computed<number[]>(() => {
@@ -33,6 +39,11 @@ const trendData = computed<number[]>(() => {
 
 /** Previous-period totals when a comparison is meaningful, else null. */
 const previous = computed(() => comparablePrevious(props.property.metrics?.previous))
+
+/** Previous value for a delta badge — null (hidden) when the source doesn't measure it. */
+function previousOf(metric: MetricKey): number | null {
+  return hasMetric(props.property, metric) ? previous.value?.[metric] ?? null : null
+}
 
 /** Top 5 traffic sources. */
 const topSources = computed(() =>
@@ -81,13 +92,13 @@ function getDevicePercentage(sessions: number): number {
           </svg>
         </button>
 
-        <div class="min-w-0">
+        <div class="min-w-0 flex items-center gap-2">
           <a
             v-if="property.websiteUrl"
             :href="property.websiteUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="text-lg font-semibold text-text-primary hover:text-text-primary transition-colors truncate flex items-center gap-1.5 group"
+            class="min-w-0 text-lg font-semibold text-text-primary hover:text-text-primary transition-colors truncate flex items-center gap-1.5 group"
           >
             {{ property.displayName }}
             <svg class="w-3.5 h-3.5 text-text-muted group-hover:text-text-secondary flex-shrink-0 transition-colors" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -97,10 +108,11 @@ function getDevicePercentage(sessions: number): number {
           </a>
           <h2
             v-else
-            class="text-lg font-semibold text-text-primary truncate"
+            class="min-w-0 text-lg font-semibold text-text-primary truncate"
           >
             {{ property.displayName }}
           </h2>
+          <SourceBadge v-if="showSource" :source="property.source" />
         </div>
       </div>
     </div>
@@ -111,27 +123,31 @@ function getDevicePercentage(sessions: number): number {
         :class="['bg-surface-card border border-border rounded-2xl p-5 transition-opacity', overviewLoading ? 'opacity-40 animate-pulse' : '']"
         :aria-busy="overviewLoading"
       >
-        <!-- Stats grid: 2 columns x 3 rows -->
+        <!-- Stats grid: 2 columns x 3 rows ("–" for metrics the source doesn't measure) -->
         <div class="grid grid-cols-2 gap-x-4 gap-y-3 mb-4">
-          <StatBadge label="Sessions" :value="formatNumber(property.metrics.sessions)">
-            <DeltaBadge :current="property.metrics.sessions" :previous="previous?.sessions" />
+          <StatBadge label="Sessions" :value="displayMetric(property, 'sessions', formatNumber)">
+            <DeltaBadge :current="property.metrics.sessions" :previous="previousOf('sessions')" />
           </StatBadge>
-          <StatBadge label="Users" :value="formatNumber(property.metrics.activeUsers)">
-            <DeltaBadge :current="property.metrics.activeUsers" :previous="previous?.activeUsers" />
+          <StatBadge label="Users" :value="displayMetric(property, 'activeUsers', formatNumber)">
+            <DeltaBadge :current="property.metrics.activeUsers" :previous="previousOf('activeUsers')" />
           </StatBadge>
-          <StatBadge label="New Users" :value="formatNumber(property.metrics.newUsers)">
-            <DeltaBadge :current="property.metrics.newUsers" :previous="previous?.newUsers" />
+          <StatBadge label="New Users" :value="displayMetric(property, 'newUsers', formatNumber)">
+            <DeltaBadge :current="property.metrics.newUsers" :previous="previousOf('newUsers')" />
           </StatBadge>
-          <StatBadge label="Pageviews" :value="formatNumber(property.metrics.screenPageViews)">
-            <DeltaBadge :current="property.metrics.screenPageViews" :previous="previous?.screenPageViews" />
+          <StatBadge label="Pageviews" :value="displayMetric(property, 'screenPageViews', formatNumber)">
+            <DeltaBadge :current="property.metrics.screenPageViews" :previous="previousOf('screenPageViews')" />
           </StatBadge>
-          <StatBadge label="Bounce Rate" :value="formatBounceRate(property.metrics.bounceRate)">
-            <DeltaBadge :current="property.metrics.bounceRate" :previous="previous?.bounceRate" mode="points" invert />
+          <StatBadge label="Bounce Rate" :value="displayMetric(property, 'bounceRate', formatBounceRate)">
+            <DeltaBadge :current="property.metrics.bounceRate" :previous="previousOf('bounceRate')" mode="points" invert />
           </StatBadge>
-          <StatBadge label="Avg Duration" :value="formatDuration(property.metrics.averageSessionDuration)">
-            <DeltaBadge :current="property.metrics.averageSessionDuration" :previous="previous?.averageSessionDuration" />
+          <StatBadge label="Avg Duration" :value="displayMetric(property, 'averageSessionDuration', formatDuration)">
+            <DeltaBadge :current="property.metrics.averageSessionDuration" :previous="previousOf('averageSessionDuration')" />
           </StatBadge>
         </div>
+
+        <p v-if="isCloudflare" class="text-xs text-text-muted mb-3">
+          Cloudflare Web Analytics: sessions are visits. Users, bounce rate and duration aren't measured.
+        </p>
 
         <!-- Sparkline: sessions trend -->
         <div class="h-10 w-full mb-3">
@@ -199,7 +215,7 @@ function getDevicePercentage(sessions: number): number {
             <tr class="border-b border-border">
               <th class="text-left text-xs text-text-muted font-medium pb-2">Page Path</th>
               <th class="text-right text-xs text-text-muted font-medium pb-2">Views</th>
-              <th class="text-right text-xs text-text-muted font-medium pb-2">Bounce Rate</th>
+              <th v-if="!isCloudflare" class="text-right text-xs text-text-muted font-medium pb-2">Bounce Rate</th>
             </tr>
           </thead>
           <tbody>
@@ -214,8 +230,38 @@ function getDevicePercentage(sessions: number): number {
               <td class="py-2 text-right text-text-primary tabular-nums">
                 {{ formatNumber(page.pageviews) }}
               </td>
+              <td v-if="!isCloudflare" class="py-2 text-right text-text-primary tabular-nums">
+                {{ page.bounceRate === undefined ? '–' : formatBounceRate(page.bounceRate) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Top Referrers (Cloudflare only — GA4 shows channels in the overview) -->
+      <div v-if="detail.referrers" class="bg-surface-card border border-border rounded-2xl p-5">
+        <h3 class="text-xs font-semibold text-text-muted uppercase tracking-widest border-b border-border pb-2 mb-4">Top Referrers</h3>
+
+        <div v-if="detail.referrers.length === 0" class="text-sm text-text-muted">No referrer data available</div>
+
+        <table v-else class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-border">
+              <th class="text-left text-xs text-text-muted font-medium pb-2">Referrer</th>
+              <th class="text-right text-xs text-text-muted font-medium pb-2">Sessions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="referrer in detail.referrers"
+              :key="referrer.referrer"
+              class="border-b border-border last:border-b-0 even:bg-white/[0.015]"
+            >
+              <td class="py-2 pr-4 text-text-primary truncate max-w-[200px]" :title="referrer.referrer">
+                {{ referrer.referrer }}
+              </td>
               <td class="py-2 text-right text-text-primary tabular-nums">
-                {{ formatBounceRate(page.bounceRate) }}
+                {{ formatNumber(referrer.sessions) }}
               </td>
             </tr>
           </tbody>
