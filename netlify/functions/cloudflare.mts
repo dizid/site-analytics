@@ -9,7 +9,7 @@
  * 2. Lists the account's Web Analytics sites (REST). Needs "Account Settings:
  *    Read" on the token; without it, sites are taken from the traffic data
  * 3. ONE GraphQL call for all sites: totals for current + previous period and
- *    a daily series (see lib/cf-report.ts)
+ *    a daily series, asked in weekly chunks to avoid sampling (see lib/cf-report.ts)
  *
  * Env (server-side only): CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, CF_OWNER_EMAIL.
  * Missing token/account → empty list plus a one-line hint for the owner.
@@ -24,10 +24,10 @@ import type {
 import { JSON_HEADERS, checkAllowedEmail, validateSession } from './lib/auth.js'
 import { parseDaysParam } from './lib/ga4-report.js'
 import {
-  OVERVIEW_QUERY,
-  DETAIL_QUERY,
-  buildOverviewVariables,
-  buildDetailVariables,
+  buildOverviewRequest,
+  buildDetailRequests,
+  mergeOverviewChunks,
+  mergeDetailChunks,
   buildCfDateRange,
   buildCloudflareProperties,
   parseCfDetail,
@@ -37,9 +37,9 @@ import {
   extractAccount,
   isCloudflareOwner,
   missingConfigNotice,
-  type CFDetailAccount,
+  type CFChunkedAccount,
+  type CFGraphQLRequest,
   type CFGraphQLResponse,
-  type CFOverviewAccount,
   type CFSite,
   type CFSiteInfo,
 } from './lib/cf-report.js'
@@ -68,19 +68,15 @@ function readConfig(): CloudflareConfig | null {
 // Cloudflare API calls
 // ---------------------------------------------------------------------------
 
-/** POSTs a GraphQL query and returns the account node. Throws with Cloudflare's message. */
-async function queryAccount<T>(
-  config: CloudflareConfig,
-  query: string,
-  variables: object,
-): Promise<T> {
+/** POSTs a GraphQL request and returns the account node. Throws with Cloudflare's message. */
+async function queryAccount<T>(config: CloudflareConfig, request: CFGraphQLRequest): Promise<T> {
   const response = await fetch(`${API_BASE}/graphql`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${config.token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ query, variables }),
+    body: JSON.stringify(request),
   })
 
   const body = await response.text()
@@ -157,10 +153,10 @@ async function handleOverview(isOwner: boolean, days: DateRange): Promise<Respon
     const now = new Date()
     const [sites, account] = await Promise.all([
       fetchSiteList(config),
-      queryAccount<CFOverviewAccount>(config, OVERVIEW_QUERY, buildOverviewVariables(config.accountId, days, now)),
+      queryAccount<CFChunkedAccount>(config, buildOverviewRequest(config.accountId, days, now)),
     ])
 
-    const properties = buildCloudflareProperties(account, buildCfDateRange(days, now), sites)
+    const properties = buildCloudflareProperties(mergeOverviewChunks(account), buildCfDateRange(days, now), sites)
 
     return jsonResponse(report({
       properties,
@@ -193,16 +189,17 @@ async function handleDetail(
   }
 
   try {
-    const account = await queryAccount<CFDetailAccount>(
-      config,
-      DETAIL_QUERY,
-      buildDetailVariables(config.accountId, siteTag, days),
+    // One request per breakdown (Cloudflare caps nodes per request); aliases don't overlap
+    const accounts = await Promise.all(
+      buildDetailRequests(config.accountId, siteTag, days)
+        .map((request) => queryAccount<CFChunkedAccount>(config, request)),
     )
+    const account: CFChunkedAccount = Object.assign({}, ...accounts)
 
     const result: DetailResponse = {
       generatedAt: new Date().toISOString(),
       dateRange:   days,
-      detail:      parseCfDetail(account, siteTag),
+      detail:      parseCfDetail(mergeDetailChunks(account), siteTag),
     }
     return jsonResponse(result)
   } catch (err) {

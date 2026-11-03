@@ -8,7 +8,7 @@
  *
  * Account limits (GraphQL `settings` node): one query node may span at most
  * 93 days and data is kept for 184 days. 90d + previous 90d = 180 days back,
- * so it fits, but the current and previous period must be separate nodes.
+ * so it fits. Every period is queried in weekly chunks (see CHUNK_DAYS).
  */
 
 import type {
@@ -119,66 +119,126 @@ export function buildFilter(range: CFDateRange, siteTag?: string): object {
 }
 
 /**
- * Overview for ALL sites in one request, grouped by site:
- * - current / previous: totals per site + host (host names the site when the
- *   REST site list is unavailable)
- * - daily: visits per site per day (sparkline)
+ * Cloudflare keeps full-resolution page loads for only about a week. A query
+ * node spanning more than that is answered from a 1-in-10 sample (seen on a
+ * 30-day node even at tiny traffic: 30d showed fewer visits than 7d). So every
+ * period is queried in chunks of at most 7 days and summed — visits and
+ * pageviews are additive. Older weeks stay Cloudflare's own sampled estimate.
  */
-export const OVERVIEW_QUERY = `query StatPilotOverview($accountTag: string!, $current: ${FILTER_TYPE}!, $previous: ${FILTER_TYPE}!) {
+const CHUNK_DAYS = 7
+
+/** Splits a range into chunks of at most CHUNK_DAYS, newest first — chunk 0 is the period's last 7 days. */
+export function splitIntoChunks(range: CFDateRange): CFDateRange[] {
+  const start = Date.parse(`${range.start}T00:00:00Z`)
+  const chunks: CFDateRange[] = []
+  for (let end = Date.parse(`${range.end}T00:00:00Z`); end >= start; end -= CHUNK_DAYS * DAY_MS) {
+    const chunkStart = Math.max(start, end - (CHUNK_DAYS - 1) * DAY_MS)
+    chunks.push({
+      start: new Date(chunkStart).toISOString().slice(0, 10),
+      end:   new Date(end).toISOString().slice(0, 10),
+    })
+  }
+  return chunks
+}
+
+export interface CFGraphQLRequest {
+  query: string
+  variables: Record<string, unknown>
+}
+
+/** One aliased dataset node. Its filter is the GraphQL variable `filterVar`. */
+interface QueryNode {
+  alias: string
+  filterVar: string
+  args: string   // e.g. 'limit: 10, orderBy: [count_DESC]'
+  fields: string // e.g. 'count dimensions { requestPath }'
+}
+
+/** One GraphQL request with every node; each filter is passed as its own variable. */
+function buildRequest(
+  operation: string,
+  accountTag: string,
+  filters: Record<string, object>,
+  nodes: QueryNode[],
+): CFGraphQLRequest {
+  const params = Object.keys(filters).map((name) => `$${name}: ${FILTER_TYPE}!`).join(', ')
+  const body = nodes
+    .map((n) => `      ${n.alias}: rumPageloadEventsAdaptiveGroups(filter: $${n.filterVar}, ${n.args}) { ${n.fields} }`)
+    .join('\n')
+  return {
+    query: `query ${operation}($accountTag: string!, ${params}) {
   viewer {
     accounts(filter: { accountTag: $accountTag }) {
-      current: rumPageloadEventsAdaptiveGroups(filter: $current, limit: 1000, orderBy: [count_DESC]) {
-        count
-        sum { visits }
-        dimensions { siteTag requestHost }
-      }
-      previous: rumPageloadEventsAdaptiveGroups(filter: $previous, limit: 1000, orderBy: [count_DESC]) {
-        count
-        sum { visits }
-        dimensions { siteTag requestHost }
-      }
-      daily: rumPageloadEventsAdaptiveGroups(filter: $current, limit: 10000, orderBy: [date_ASC]) {
-        sum { visits }
-        dimensions { siteTag date }
-      }
+${body}
     }
   }
-}`
-
-export function buildOverviewVariables(accountTag: string, days: DateRange, now = new Date()) {
-  return {
-    accountTag,
-    current: buildFilter(buildCfDateRange(days, now)),
-    previous: buildFilter(buildCfPreviousDateRange(days, now)),
+}`,
+    variables: { accountTag, ...filters },
   }
 }
 
-/** One site's breakdowns for the current period. Referrers over-fetch: own-host rows get dropped. */
-export const DETAIL_QUERY = `query StatPilotDetail($accountTag: string!, $filter: ${FILTER_TYPE}!) {
-  viewer {
-    accounts(filter: { accountTag: $accountTag }) {
-      pages: rumPageloadEventsAdaptiveGroups(filter: $filter, limit: 10, orderBy: [count_DESC]) {
-        count
-        dimensions { requestPath }
-      }
-      referrers: rumPageloadEventsAdaptiveGroups(filter: $filter, limit: 20, orderBy: [sum_visits_DESC]) {
-        sum { visits }
-        dimensions { refererHost }
-      }
-      countries: rumPageloadEventsAdaptiveGroups(filter: $filter, limit: 10, orderBy: [sum_visits_DESC]) {
-        sum { visits }
-        dimensions { countryName }
-      }
-      devices: rumPageloadEventsAdaptiveGroups(filter: $filter, limit: 10, orderBy: [sum_visits_DESC]) {
-        sum { visits }
-        dimensions { deviceType }
-      }
-    }
+/**
+ * Overview for ALL sites in one request: per period one node per chunk
+ * (`current_0`, `previous_0`, …) with pageviews + visits per site, host and
+ * day. Summed per site that gives the totals (the host names the site when the
+ * REST site list is unavailable); per day, the sparkline.
+ */
+export function buildOverviewRequest(accountTag: string, days: DateRange, now = new Date()): CFGraphQLRequest {
+  const periods = { current: buildCfDateRange(days, now), previous: buildCfPreviousDateRange(days, now) }
+  const filters: Record<string, object> = {}
+  for (const [period, range] of Object.entries(periods)) {
+    splitIntoChunks(range).forEach((chunk, i) => { filters[`${period}_${i}`] = buildFilter(chunk) })
   }
-}`
+  const nodes = Object.keys(filters).map((name) => ({
+    alias:     name,
+    filterVar: name,
+    args:      'limit: 10000',
+    fields:    'count sum { visits } dimensions { siteTag requestHost date }',
+  }))
+  return buildRequest('StatPilotOverview', accountTag, filters, nodes)
+}
 
-export function buildDetailVariables(accountTag: string, siteTag: string, days: DateRange, now = new Date()) {
-  return { accountTag, filter: buildFilter(buildCfDateRange(days, now), siteTag) }
+type Breakdown = 'pages' | 'referrers' | 'countries' | 'devices'
+type CFDimension = 'requestPath' | 'refererHost' | 'countryName' | 'deviceType'
+
+/** Per detail breakdown: its dimension, what it is ranked by, and how many rows the UI needs. */
+const BREAKDOWNS: Record<Breakdown, { dimension: CFDimension; rankBy: 'count' | 'visits'; limit: number }> = {
+  pages:     { dimension: 'requestPath', rankBy: 'count',  limit: 10 },
+  // Over-fetch: own-host rows (0 visits) get dropped in parseCfDetail
+  referrers: { dimension: 'refererHost', rankBy: 'visits', limit: 20 },
+  countries: { dimension: 'countryName', rankBy: 'visits', limit: 10 },
+  devices:   { dimension: 'deviceType',  rankBy: 'visits', limit: 10 },
+}
+
+// Rows per breakdown per chunk — well above the UI limits, so an item that is
+// just outside the top 10 in each single week still adds up correctly
+const DETAIL_CHUNK_LIMIT = 100
+
+/**
+ * One site's breakdowns for the current period: ONE request per breakdown,
+ * with a node per chunk (`pages_0`, …). Cloudflare rejects a request with too
+ * many nodes (90d: 4 × 13 = 52 was refused, 26 works), so they are split.
+ * Aliases are unique across the requests — their account nodes can be merged.
+ */
+export function buildDetailRequests(
+  accountTag: string,
+  siteTag: string,
+  days: DateRange,
+  now = new Date(),
+): CFGraphQLRequest[] {
+  const filters: Record<string, object> = {}
+  splitIntoChunks(buildCfDateRange(days, now)).forEach((chunk, i) => {
+    filters[`chunk_${i}`] = buildFilter(chunk, siteTag)
+  })
+  return Object.entries(BREAKDOWNS).map(([name, { dimension, rankBy }]) => {
+    const nodes = Object.keys(filters).map((filterVar, i) => ({
+      alias:  `${name}_${i}`,
+      filterVar,
+      args:   `limit: ${DETAIL_CHUNK_LIMIT}, orderBy: [${rankBy === 'count' ? 'count_DESC' : 'sum_visits_DESC'}]`,
+      fields: `count sum { visits } dimensions { ${dimension} }`,
+    }))
+    return buildRequest('StatPilotDetail', accountTag, filters, nodes)
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -211,6 +271,9 @@ export interface CFDetailAccount {
   countries?: CFGroup[]
   devices?: CFGroup[]
 }
+
+/** The account node as returned for a chunked request: rows per alias (`current_0`, `pages_3`, …). */
+export type CFChunkedAccount = Record<string, CFGroup[] | undefined>
 
 export interface CFGraphQLResponse<T> {
   data?: { viewer?: { accounts?: T[] } } | null
@@ -253,6 +316,51 @@ export function extractAccount<T>(response: CFGraphQLResponse<T>): T {
   const account = response.data?.viewer?.accounts?.[0]
   if (!account) throw new Error('Cloudflare API: account not found — check CLOUDFLARE_ACCOUNT_ID')
   return account
+}
+
+/** All rows of the chunk nodes named `<prefix>_<n>`. */
+function rowsOf(account: CFChunkedAccount, prefix: string): CFGroup[] {
+  return Object.entries(account)
+    .filter(([alias]) => alias.startsWith(`${prefix}_`))
+    .flatMap(([, rows]) => rows ?? [])
+}
+
+/** Joins the overview chunks per period. The current rows carry the date, so they are also the daily series. */
+export function mergeOverviewChunks(account: CFChunkedAccount): CFOverviewAccount {
+  const current = rowsOf(account, 'current')
+  return { current, previous: rowsOf(account, 'previous'), daily: current }
+}
+
+/** Sums one breakdown per dimension value over all chunks, ranked and cut to the UI limit. */
+function mergeBreakdown(account: CFChunkedAccount, name: Breakdown): CFGroup[] {
+  const { dimension, rankBy, limit } = BREAKDOWNS[name]
+  const byValue = new Map<string, { count: number; visits: number }>()
+  for (const row of rowsOf(account, name)) {
+    const value = row.dimensions?.[dimension] ?? ''
+    const totals = byValue.get(value) ?? { count: 0, visits: 0 }
+    totals.count += row.count ?? 0
+    totals.visits += row.sum?.visits ?? 0
+    byValue.set(value, totals)
+  }
+  return [...byValue]
+    .sort(([valueA, a], [valueB, b]) =>
+      (rankBy === 'count' ? b.count - a.count : b.visits - a.visits) || valueA.localeCompare(valueB))
+    .slice(0, limit)
+    .map(([value, totals]) => {
+      const dimensions: NonNullable<CFGroup['dimensions']> = {}
+      dimensions[dimension] = value
+      return { count: totals.count, sum: { visits: totals.visits }, dimensions }
+    })
+}
+
+/** Joins the detail chunks into one ranked list per breakdown (input for parseCfDetail). */
+export function mergeDetailChunks(account: CFChunkedAccount): CFDetailAccount {
+  return {
+    pages:     mergeBreakdown(account, 'pages'),
+    referrers: mergeBreakdown(account, 'referrers'),
+    countries: mergeBreakdown(account, 'countries'),
+    devices:   mergeBreakdown(account, 'devices'),
+  }
 }
 
 /**

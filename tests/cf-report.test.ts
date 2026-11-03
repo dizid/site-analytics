@@ -8,8 +8,11 @@ import {
   cfPropertyId,
   parseSiteParam,
   buildFilter,
-  buildOverviewVariables,
-  buildDetailVariables,
+  splitIntoChunks,
+  buildOverviewRequest,
+  buildDetailRequests,
+  mergeOverviewChunks,
+  mergeDetailChunks,
   parseCfApiError,
   extractAccount,
   parseSiteList,
@@ -107,16 +110,107 @@ describe('request shapes', () => {
     })
   })
 
-  it('overview asks for the current and previous period separately', () => {
-    const vars = buildOverviewVariables('acc', '30d', NOW)
-    expect(vars.accountTag).toBe('acc')
-    expect(vars.current).toEqual(buildFilter({ start: '2026-09-20', end: '2026-10-19' }))
-    expect(vars.previous).toEqual(buildFilter({ start: '2026-08-21', end: '2026-09-19' }))
+  it('overview has one node per weekly chunk for both periods, each with its own filter', () => {
+    const { query, variables } = buildOverviewRequest('acc', '30d', NOW)
+    expect(variables.accountTag).toBe('acc')
+    expect(Object.keys(variables).filter((k) => k.startsWith('current_'))).toHaveLength(5)
+    expect(Object.keys(variables).filter((k) => k.startsWith('previous_'))).toHaveLength(5)
+    expect(variables.current_0).toEqual(buildFilter({ start: '2026-10-13', end: '2026-10-19' }))
+    expect(variables.previous_4).toEqual(buildFilter({ start: '2026-08-21', end: '2026-08-22' }))
+    expect(query).toContain('$previous_4: AccountRumPageloadEventsAdaptiveGroupsFilter_InputObject!')
+    expect(query).toContain('current_0: rumPageloadEventsAdaptiveGroups(filter: $current_0, limit: 10000)')
   })
 
-  it('detail filters on the site and the current period', () => {
-    expect(buildDetailVariables('acc', 'abc', '7d', NOW).filter)
-      .toEqual(buildFilter({ start: '2026-10-13', end: '2026-10-19' }, 'abc'))
+  it('detail: one request per breakdown, a node per chunk, filtered on the site and the current period', () => {
+    const requests = buildDetailRequests('acc', 'abc', '30d', NOW)
+    expect(requests).toHaveLength(4)
+    const [pages] = requests
+    expect(pages?.variables.chunk_0).toEqual(buildFilter({ start: '2026-10-13', end: '2026-10-19' }, 'abc'))
+    expect(pages?.variables.chunk_4).toEqual(buildFilter({ start: '2026-09-20', end: '2026-09-21' }, 'abc'))
+    expect(pages?.variables).not.toHaveProperty('chunk_5')
+    ;['pages', 'referrers', 'countries', 'devices'].forEach((name, i) => {
+      expect(requests[i]?.query).toContain(`${name}_4: rumPageloadEventsAdaptiveGroups(filter: $chunk_4,`)
+    })
+  })
+
+  it('detail stays at 13 nodes per request for 90d (Cloudflare refused 52 in one)', () => {
+    for (const { query } of buildDetailRequests('acc', 'abc', '90d', NOW)) {
+      expect(query.match(/rumPageloadEventsAdaptiveGroups\(/g)).toHaveLength(13)
+    }
+  })
+})
+
+describe('splitIntoChunks (avoids Cloudflare sampling on long ranges)', () => {
+  it('keeps a 7-day range as one chunk', () => {
+    const range = buildCfDateRange('7d', NOW)
+    expect(splitIntoChunks(range)).toEqual([range])
+  })
+
+  it.each([['30d', [7, 7, 7, 7, 2]], ['90d', [...Array(12).fill(7), 6]]] as const)(
+    '%s splits into contiguous chunks of at most 7 days, newest first, covering the range exactly',
+    (days, sizes) => {
+      const range = buildCfDateRange(days, NOW)
+      const chunks = splitIntoChunks(range)
+      expect(chunks.map(spanDays)).toEqual(sizes)
+      expect(chunks[0]?.end).toBe(range.end)
+      expect(chunks.at(-1)?.start).toBe(range.start)
+      for (let i = 1; i < chunks.length; i++) {
+        expect(toMs(chunks[i - 1]!.start) - toMs(chunks[i]!.end)).toBe(DAY_MS)
+      }
+    },
+  )
+
+  it('the newest chunk of every period is the 7d range, so 30d always includes the 7d numbers', () => {
+    const last7 = buildCfDateRange('7d', NOW)
+    expect(splitIntoChunks(buildCfDateRange('30d', NOW))[0]).toEqual(last7)
+    expect(splitIntoChunks(buildCfDateRange('90d', NOW))[0]).toEqual(last7)
+  })
+})
+
+describe('merging chunks', () => {
+  it('overview: joins the weekly rows per period; dated current rows are also the daily series', () => {
+    const merged = mergeOverviewChunks({
+      current_0: [{ count: 5, sum: { visits: 4 }, dimensions: { siteTag: 'A', requestHost: 'a.com', date: '2026-10-19' } }],
+      current_1: [{ count: 3, sum: { visits: 2 }, dimensions: { siteTag: 'A', requestHost: 'a.com', date: '2026-10-12' } }],
+      previous_0: [{ count: 1, sum: { visits: 1 }, dimensions: { siteTag: 'A', requestHost: 'a.com', date: '2026-09-19' } }],
+    })
+    const [a] = buildCloudflareProperties(merged, { start: '2026-10-12', end: '2026-10-19' }, null)
+    expect(a?.metrics).toMatchObject({ sessions: 6, screenPageViews: 8 })
+    expect(a?.metrics?.previous).toMatchObject({ sessions: 1, screenPageViews: 1 })
+    expect(a?.metrics?.trend?.[0]).toMatchObject({ date: '2026-10-12', sessions: 2 })
+    expect(a?.metrics?.trend?.at(-1)).toMatchObject({ date: '2026-10-19', sessions: 4 })
+  })
+
+  it('detail: sums the same item over weeks and re-ranks it', () => {
+    const merged = mergeDetailChunks({
+      pages_0: [
+        { count: 5, sum: { visits: 1 }, dimensions: { requestPath: '/a' } },
+        { count: 3, sum: { visits: 1 }, dimensions: { requestPath: '/b' } },
+      ],
+      pages_1: [
+        { count: 4, sum: { visits: 1 }, dimensions: { requestPath: '/b' } },
+        { count: 1, sum: { visits: 1 }, dimensions: { requestPath: '/c' } },
+      ],
+      countries_0: [{ count: 9, sum: { visits: 2 }, dimensions: { countryName: 'NL' } }],
+      countries_1: [{ count: 1, sum: { visits: 3 }, dimensions: { countryName: 'TH' } }],
+    })
+    // Pages rank by pageviews, countries by visits
+    expect(merged.pages?.map((r) => [r.dimensions?.requestPath, r.count])).toEqual([['/b', 7], ['/a', 5], ['/c', 1]])
+    expect(merged.countries?.map((r) => r.dimensions?.countryName)).toEqual(['TH', 'NL'])
+    expect(merged.referrers).toEqual([])
+  })
+
+  it('detail: cuts each breakdown to what the UI shows', () => {
+    const rows = Array.from({ length: 15 }, (_, i) => ({ count: 15 - i, dimensions: { requestPath: `/p${i}` } }))
+    expect(mergeDetailChunks({ pages_0: rows }).pages).toHaveLength(10)
+  })
+
+  it('detail: keeps an empty referrer host as one row (shown as "(direct)")', () => {
+    const merged = mergeDetailChunks({
+      referrers_0: [{ sum: { visits: 2 }, dimensions: { refererHost: '' } }],
+      referrers_1: [{ sum: { visits: 3 }, dimensions: { refererHost: '' } }],
+    })
+    expect(parseCfDetail(merged, 'A').referrers).toEqual([{ referrer: '(direct)', sessions: 5 }])
   })
 })
 
