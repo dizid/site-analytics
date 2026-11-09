@@ -12,10 +12,14 @@ import ErrorBanner from './components/ErrorBanner.vue'
 import AggregateKPIs from './components/AggregateKPIs.vue'
 import CloudflareKPIs from './components/CloudflareKPIs.vue'
 import AppFooter from './components/AppFooter.vue'
+import UpgradeCard from './components/UpgradeCard.vue'
 
 const { isAuthenticated, isLoading: authLoading, user, logout } = useAuth()
 const {
   properties,
+  plan,
+  justUpgraded,
+  confirmUpgrade,
   sortedProperties,
   pairStarts,
   isLoading,
@@ -49,9 +53,17 @@ const {
   deselectProperty,
 } = useAnalyticsData()
 
-// Fetch initial data when authenticated
+// Fetch initial data when authenticated. Coming back from the Stripe checkout
+// (?upgraded=1): clean the URL, then wait for the payment to be recorded.
 watch(isAuthenticated, (auth) => {
-  if (auth) fetchReport()
+  if (!auth) return
+  const params = new URLSearchParams(window.location.search)
+  if (params.has('upgraded')) {
+    history.replaceState(null, '', window.location.pathname + window.location.hash)
+    confirmUpgrade()
+  } else {
+    fetchReport()
+  }
 }, { immediate: true })
 </script>
 
@@ -96,6 +108,15 @@ watch(isAuthenticated, (auth) => {
           : error"
         @retry="refresh"
       />
+
+      <!-- Right after a successful payment -->
+      <p
+        v-if="justUpgraded"
+        class="mb-4 rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-sm text-success"
+        role="status"
+      >
+        Payment received. All your sites are on the dashboard now. Thank you!
+      </p>
 
       <!-- Detail view: single property breakdown -->
       <PropertyDetail
@@ -158,6 +179,14 @@ watch(isAuthenticated, (auth) => {
           :show-source="showSource"
           @sort="setSortColumn"
           @select="selectProperty"
+        />
+
+        <!-- Free plan: the user's other sites, by name, with the one-time upgrade -->
+        <UpgradeCard
+          v-if="plan?.tier === 'free' && plan.lockedProperties.length > 0 && !isLoading"
+          class="mt-4"
+          :locked="plan.lockedProperties"
+          :upgrade-url="plan.upgradeUrl"
         />
       </template>
     </main>

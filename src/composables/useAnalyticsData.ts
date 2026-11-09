@@ -7,14 +7,16 @@
  * see each other's cached data: `ga4:<userId>:<dateRange>`.
  *
  * Cloudflare Web Analytics sites are fetched and cached separately
- * (`ga4:v3:cf:<userId>:<dateRange>`) so a Cloudflare failure never touches
+ * (`ga4:v4:cf:<userId>:<dateRange>`) so a Cloudflare failure never touches
  * the GA4 data, and GA4 totals stay GA4-only. Both are merged for the list.
  */
 
 import { ref, computed, watch, readonly } from 'vue'
 import type { ComputedRef } from 'vue'
 import type {
+  DateRange,
   PeriodTotals,
+  PlanInfo,
   PropertyResult,
   PropertyDetail,
   SortColumn,
@@ -32,8 +34,9 @@ const VIEWMODE_STORAGE_KEY = 'ga4:viewMode'
 
 // Bump the version when the cached data shape or meaning changes, so old
 // entries are ignored instead of served stale (v2: deduplicated users,
-// v3: previous-period totals). Must stay under `ga4:` so logout still wipes it.
-const CACHE_PREFIX = 'ga4:v3'
+// v3: previous-period totals, v4: free plan shows a subset + plan info).
+// Must stay under `ga4:` so logout still wipes it.
+const CACHE_PREFIX = 'ga4:v4'
 
 // ---------------------------------------------------------------------------
 // Singleton state — declared outside the function so all callers share it
@@ -45,6 +48,10 @@ const isLoading = ref(false)
 const isRefreshing = ref(false)
 const error = ref<string | null>(null)
 const lastFetchedAt = ref<string | null>(null)
+// Free vs paid — null while payments aren't switched on (everyone sees all sites)
+const plan = ref<PlanInfo | null>(null)
+// True once the account turned paid right after a Stripe checkout redirect
+const justUpgraded = ref(false)
 
 // Cloudflare sites — always empty for anyone but the Cloudflare owner
 const cfProperties = ref<PropertyResult[]>([])
@@ -83,9 +90,9 @@ const { getUserId } = useAuth()
  * Falls back to a generic key if the user ID is unavailable (shouldn't happen
  * in practice since analytics is only fetched while authenticated).
  */
-function getCacheKey(): string {
+function getCacheKey(range: DateRange = dateRange.value): string {
   const userId = getUserId()
-  return userId ? `${CACHE_PREFIX}:${userId}:${dateRange.value}` : `${CACHE_PREFIX}:${dateRange.value}`
+  return userId ? `${CACHE_PREFIX}:${userId}:${range}` : `${CACHE_PREFIX}:${range}`
 }
 
 /** Same as getCacheKey, for the Cloudflare report. */
@@ -102,6 +109,10 @@ function getCfCacheKey(): string {
 function cleanLegacyCacheKeys(): void {
   const legacy = ['ga4:7d', 'ga4:30d', 'ga4:90d']
   legacy.forEach((key) => localStorage.removeItem(key))
+  // v3 reports (before the free plan) — would otherwise sit there until they expire
+  Object.keys(localStorage)
+    .filter((key) => key.startsWith('ga4:v3:'))
+    .forEach((key) => localStorage.removeItem(key))
 }
 
 // ---------------------------------------------------------------------------
@@ -238,7 +249,7 @@ function syncSelectedProperty(): void {
   if (fresh) selectedProperty.value = fresh
 }
 
-type CachedReport = { properties: PropertyResult[]; generatedAt: string }
+type CachedReport = { properties: PropertyResult[]; generatedAt: string; plan?: PlanInfo | null }
 type CachedCfReport = { properties: PropertyResult[]; notice: string | null }
 
 /**
@@ -263,6 +274,7 @@ async function fetchGa4Report(force = false): Promise<void> {
     const cached = cache.getEntry<CachedReport>(cacheKey)
     if (cached !== null) {
       properties.value = cached.data.properties
+      plan.value = cached.data.plan ?? null
       lastFetchedAt.value = cached.data.generatedAt
       syncSelectedProperty()
       error.value = null
@@ -292,7 +304,7 @@ async function fetchGa4Report(force = false): Promise<void> {
     // Cache even if superseded — the key belongs to the range it was fetched for
     cache.set(
       cacheKey,
-      { properties: response.properties, generatedAt: response.generatedAt },
+      { properties: response.properties, generatedAt: response.generatedAt, plan: response.plan ?? null },
       CACHE_TTL_24H,
     )
 
@@ -300,6 +312,7 @@ async function fetchGa4Report(force = false): Promise<void> {
     if (myFetchId !== fetchId) return
 
     properties.value = response.properties
+    plan.value = response.plan ?? null
     lastFetchedAt.value = response.generatedAt
     syncSelectedProperty()
   } catch (err) {
@@ -377,6 +390,25 @@ async function fetchCloudflareReport(force = false): Promise<void> {
 /** Loads GA4 and Cloudflare in parallel; each handles its own errors. */
 async function fetchReport(force = false): Promise<void> {
   await Promise.all([fetchGa4Report(force), fetchCloudflareReport(force)])
+}
+
+// After paying, the webhook usually lands within seconds; stop asking after ~20s
+const UPGRADE_CHECKS = 6
+const UPGRADE_CHECK_INTERVAL_MS = 3000
+
+/**
+ * Called after the Stripe checkout redirects back (?upgraded=1): drops the
+ * cached free-plan reports of every range, then refetches until the webhook
+ * has marked the account paid. If it takes longer, a later refresh picks it up.
+ */
+async function confirmUpgrade(): Promise<void> {
+  for (const range of ['7d', '30d', '90d'] as const) cache.invalidate(getCacheKey(range))
+  await fetchReport(true)
+  for (let check = 1; check < UPGRADE_CHECKS && plan.value?.tier === 'free'; check++) {
+    await new Promise((resolve) => setTimeout(resolve, UPGRADE_CHECK_INTERVAL_MS))
+    await fetchGa4Report(true)
+  }
+  justUpgraded.value = plan.value?.tier === 'pro'
 }
 
 function setViewMode(mode: ViewMode): void {
@@ -472,6 +504,8 @@ export function useAnalyticsData() {
     isRefreshing: readonly(isRefreshing),
     error: readonly(error),
     lastFetchedAt: readonly(lastFetchedAt),
+    plan: readonly(plan),
+    justUpgraded: readonly(justUpgraded),
     viewMode: readonly(viewMode),
     sortColumn: readonly(sortColumn),
     sortDirection: readonly(sortDirection),
@@ -502,6 +536,7 @@ export function useAnalyticsData() {
 
     // Actions
     fetchReport,
+    confirmUpgrade,
     setViewMode,
     setSortColumn,
     refresh,

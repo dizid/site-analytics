@@ -40,7 +40,7 @@ The problem: GA4 has no "all properties" overview. If you manage 10+ websites yo
 
 I built StatPilot. Sign in with Google, it calls the GA4 Management API, discovers all your properties automatically, and renders the dashboard. Zero per-site setup.
 
-The interesting technical bit: I avoided the gRPC SDK entirely and hit the GA4 REST Data API directly. The gRPC approach would have ballooned the Netlify Functions bundle past the 50MB limit. REST + google-auth-library keeps things lean. Reports for all properties are batched in groups of 10 so you are not firing 15 sequential requests.
+The interesting technical bit: I avoided the gRPC SDK entirely and hit the GA4 REST Data API directly. The gRPC approach would have ballooned the Netlify Functions bundle past the 50MB limit. Plain REST fetch calls keep the function bundle small. Reports for all properties are batched in groups of 10 so you are not firing 15 sequential requests.
 
 Stack: Vue 3 + TypeScript, Vite 7, Tailwind CSS 4, Netlify Functions (.mts), GA4 REST API. LocalStorage cache with 6h TTL — subsequent visits load instantly without an API call.
 
@@ -48,7 +48,7 @@ Free for 3 properties. $19/month for 15. $49/month for unlimited.
 
 https://statpilot.mom
 
-Happy to answer questions about the GA4 API side — there are some non-obvious quirks with the service account auth flow worth documenting.
+Happy to answer questions about the GA4 API side — there are some non-obvious quirks with the OAuth and refresh-token flow worth documenting.
 
 ---
 

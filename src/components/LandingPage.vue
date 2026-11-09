@@ -5,11 +5,25 @@
  * Replaces LoginScreen.vue. CTA triggers Google OAuth via useAuth.login().
  */
 
+import { ref } from 'vue'
 import { useAuth } from '../composables/useAuth'
+import { FREE_PROPERTY_LIMIT, PRO_PRICE_LABEL, REFUND_DAYS } from '../lib/pricing'
 
 const { login, error } = useAuth()
 
 const currentYear = new Date().getFullYear()
+
+// Mobile menu (the links sit inline from the sm breakpoint up)
+const menuOpen = ref(false)
+const navLinks = [
+  { label: 'Features', href: '#features' },
+  { label: 'Pricing', href: '#pricing' },
+  { label: 'Blog', href: '/blog/' },
+]
+
+// While Google reviews the app, sign-in shows Google's "hasn't verified this app"
+// screen. Set to false once the verification is approved.
+const GOOGLE_VERIFICATION_PENDING = true
 
 // Feature cards data
 const features = [
@@ -29,59 +43,106 @@ const features = [
 
 // Comparison table data
 const competitors = [
-  { name: 'StatPilot', price: 'Free', setup: '0 min', autoDiscovers: true, googleSignIn: true, highlight: true },
+  { name: 'StatPilot', price: `Free / ${PRO_PRICE_LABEL} once`, setup: '0 min', autoDiscovers: true, googleSignIn: true, highlight: true },
   { name: 'AgencyAnalytics', price: '$79/mo', setup: '30+ min', autoDiscovers: false, googleSignIn: false, highlight: false },
   { name: 'Databox', price: '$199/mo', setup: '60+ min', autoDiscovers: false, googleSignIn: false, highlight: false },
   { name: 'DashThis', price: '$119/mo', setup: '45+ min', autoDiscovers: false, googleSignIn: false, highlight: false },
 ]
 
-// Pricing tiers
+// Pricing: free for the busiest sites, one payment for all of them (no subscription).
+// Paying happens inside the dashboard after sign-in, so both buttons sign in.
 const plans = [
   {
-    name: 'Solo',
-    price: 'Free',
+    name: 'Free',
+    price: '$0',
     period: '',
     badge: null,
     features: [
-      'Up to 3 GA4 properties',
-      '7-day date range',
-      '6-hour data refresh',
+      `Your ${FREE_PROPERTY_LIMIT} busiest GA4 properties`,
+      '7, 30 and 90-day ranges',
+      'Change vs the previous period',
+      'Top pages, devices, countries per site',
     ],
-    cta: 'Start Free',
+    cta: 'Start free',
     highlighted: false,
   },
   {
-    name: 'Builder',
-    price: '$19',
-    period: '/mo',
-    badge: 'Most Popular',
+    name: 'All sites',
+    price: PRO_PRICE_LABEL,
+    period: 'once',
+    badge: 'Pay once',
     features: [
-      'Up to 15 GA4 properties',
-      '7d / 30d / 90d ranges',
-      '1-hour data refresh',
+      'Every GA4 property you have access to',
+      'Everything in Free',
+      'No subscription, ever',
+      `${REFUND_DAYS}-day refund, no questions`,
     ],
-    cta: 'Start Free',
+    cta: 'Start free, upgrade inside',
     highlighted: true,
-  },
-  {
-    name: 'Studio',
-    price: '$49',
-    period: '/mo',
-    badge: null,
-    features: [
-      'Unlimited GA4 properties',
-      'All date ranges',
-      '15-minute data refresh',
-      'Priority support',
-    ],
-    cta: 'Start Free',
-    highlighted: false,
   },
 ]
 </script>
 
 <template>
   <div class="min-h-screen bg-surface text-text-primary antialiased">
+
+    <!-- =====================================================================
+         TOP MENU — same links as the blog pages (scripts/build-blog.mjs)
+         ===================================================================== -->
+    <header class="sticky top-0 z-30 border-b border-border bg-surface/90 backdrop-blur-sm">
+      <nav class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3" aria-label="Main">
+        <a href="/" class="flex items-center gap-2 text-sm font-bold text-text-primary">
+          <span class="h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
+          StatPilot
+        </a>
+
+        <div class="flex items-center gap-2">
+          <!-- Inline links from sm up -->
+          <a
+            v-for="link in navLinks"
+            :key="link.href"
+            :href="link.href"
+            class="hidden rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:text-text-primary sm:inline-block"
+          >
+            {{ link.label }}
+          </a>
+          <button
+            type="button"
+            class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-hover cursor-pointer"
+            @click="login"
+          >
+            Sign in
+          </button>
+          <!-- Mobile menu toggle -->
+          <button
+            type="button"
+            class="rounded-lg p-2 text-text-secondary hover:text-text-primary sm:hidden cursor-pointer"
+            :aria-expanded="menuOpen"
+            aria-controls="mobile-menu"
+            aria-label="Menu"
+            @click="menuOpen = !menuOpen"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path v-if="menuOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+      </nav>
+
+      <!-- Mobile menu panel -->
+      <div v-if="menuOpen" id="mobile-menu" class="border-t border-border px-4 pb-3 sm:hidden">
+        <a
+          v-for="link in navLinks"
+          :key="link.href"
+          :href="link.href"
+          class="block rounded-lg px-3 py-2.5 text-sm text-text-secondary hover:text-text-primary"
+          @click="menuOpen = false"
+        >
+          {{ link.label }}
+        </a>
+      </div>
+    </header>
 
     <!-- =====================================================================
          HERO SECTION
@@ -167,7 +228,11 @@ const plans = [
 
         <!-- Trust note below CTA -->
         <p class="mt-3 text-xs text-text-muted">
-          Free for up to 3 properties. No credit card required.
+          Free for your {{ FREE_PROPERTY_LIMIT }} busiest sites. All your sites: {{ PRO_PRICE_LABEL }} once, no subscription.
+        </p>
+        <p v-if="GOOGLE_VERIFICATION_PENDING" class="mx-auto mt-2 max-w-md text-xs text-text-muted">
+          Google is still reviewing StatPilot, so sign-in may show "Google hasn't verified this app".
+          Click <span class="text-text-secondary">Advanced → Go to statpilot.mom</span> to continue. Access is read-only.
         </p>
 
       </div>
@@ -176,7 +241,7 @@ const plans = [
     <!-- =====================================================================
          FEATURES SECTION
          ===================================================================== -->
-    <section class="px-4 py-20 sm:py-24" aria-labelledby="features-heading">
+    <section id="features" class="scroll-mt-16 px-4 py-20 sm:py-24" aria-labelledby="features-heading">
       <div class="mx-auto max-w-6xl">
 
         <div class="mb-12 text-center">
@@ -314,20 +379,20 @@ const plans = [
     <!-- =====================================================================
          PRICING SECTION
          ===================================================================== -->
-    <section class="px-4 py-20 sm:py-24" aria-labelledby="pricing-heading">
-      <div class="mx-auto max-w-5xl">
+    <section id="pricing" class="scroll-mt-16 px-4 py-20 sm:py-24" aria-labelledby="pricing-heading">
+      <div class="mx-auto max-w-3xl">
 
         <div class="mb-12 text-center">
           <h2 id="pricing-heading" class="text-2xl font-bold text-text-primary sm:text-3xl">
-            Simple pricing. Start free.
+            Start free. Pay once if you want all your sites.
           </h2>
           <p class="mt-3 text-text-secondary">
-            All plans start with a free trial. No credit card required.
+            No subscription and no credit card to start. One payment covers every site you have in GA4.
           </p>
         </div>
 
-        <!-- 3-column pricing grid: 1 col mobile, 3 col desktop -->
-        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <!-- 2-column pricing grid: 1 col mobile, 2 cols from sm -->
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div
             v-for="plan in plans"
             :key="plan.name"
@@ -416,13 +481,19 @@ const plans = [
 
         <nav class="flex gap-5" aria-label="Footer navigation">
           <a
-            href="#"
+            href="/blog/"
+            class="text-xs text-text-muted transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent rounded"
+          >
+            Blog
+          </a>
+          <a
+            href="/privacy"
             class="text-xs text-text-muted transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent rounded"
           >
             Privacy
           </a>
           <a
-            href="#"
+            href="/terms"
             class="text-xs text-text-muted transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent rounded"
           >
             Terms

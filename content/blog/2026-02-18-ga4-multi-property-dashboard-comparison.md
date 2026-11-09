@@ -89,7 +89,7 @@ StatPilot takes a different approach. Instead of connecting properties one by on
 
 The dashboard shows sessions, users, pageviews, and bounce rate for each property, with a sparkline trend line so you can see at a glance whether a site is growing or declining. The whole thing is dark mode, designed for quick scanning, and works well on mobile.
 
-**Pricing:** Free for 3 properties, $19/month for up to 15, $49/month for unlimited.
+**Pricing:** Free for your 3 busiest properties. A one-time payment of $19 covers all of them, with no subscription.
 
 **What is actually different:** The auto-discovery eliminates the overhead that makes the other tools annoying to set up and maintain. When you launch a new website and connect GA4, it appears on your StatPilot dashboard automatically. You do not need to log back in and add it.
 
@@ -111,7 +111,7 @@ The trade-off: StatPilot only does GA4. It does not pull from Google Ads, Facebo
 | Databox | $159/mo | 3 data sources | Yes | No | Marketing teams |
 | DashThis | $49/mo | 3 dashboards | Yes | No | Freelancers / agencies |
 | AnalyticsPortfolio | $49/mo | 40 sites | Yes | No | Portfolio owners |
-| StatPilot | Free / $19/mo | 3 / 15 / unlimited | No | Yes | Developers / founders |
+| StatPilot | Free / $19 once | 3 / unlimited | No | Yes | Developers / founders |
 
 ---
 
@@ -123,12 +123,12 @@ The right tool depends entirely on what you are actually trying to do.
 
 **If you need GA4 data combined with ad spend and CRM data:** Databox. It is expensive and complex, but it handles cross-channel data better than anything else in this list.
 
-**If you manage your own portfolio of websites and want to see GA4 data fast:** StatPilot or AnalyticsPortfolio. StatPilot is the better experience and cheaper at most tiers. AnalyticsPortfolio is a reasonable backup if StatPilot does not cover a specific feature you need.
+**If you manage your own portfolio of websites and want to see GA4 data fast:** StatPilot or AnalyticsPortfolio. StatPilot is the better experience, and it is a one-time payment instead of a subscription. AnalyticsPortfolio is a reasonable backup if StatPilot does not cover a specific feature you need.
 
 **If you have 3 or fewer properties:** StatPilot is free. No reason to use anything else.
 
 ---
 
-StatPilot is free to try with up to 3 properties. Sign in with Google, and your dashboard is ready in a few seconds: [statpilot.mom](https://statpilot.mom)
+StatPilot is free for your 3 busiest properties, and $19 once for all of them. Sign in with Google, and your dashboard is ready in a few seconds: [statpilot.mom](https://statpilot.mom)
 
 If you manage more than 3 sites, the $19/month tier covers up to 15 properties. No annual commitment required.

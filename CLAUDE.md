@@ -34,6 +34,7 @@ Do NOT add Vite proxy for `/api` routes — the plugin handles this.
 - **Google OAuth** — authorization code flow with `analytics.readonly` scope
 - **Per-user GA4 access** — each user's own Google credentials, properties auto-discovered
 - **Cloudflare Web Analytics (optional, owner-only)** — Marc's own Cloudflare account, shown next to GA4 with a source badge. Only `CF_OWNER_EMAIL` gets data; everyone else gets an empty list (dashboard stays GA4-only). REST site list + ONE GraphQL call (`rumPageloadEventsAdaptiveGroups`) for all sites
+- **Free vs paid (one-time Stripe payment)** — free: the user's 3 busiest GA4 properties in full, the rest by name only (no numbers leave the server). $19 once unlocks all. Gate is OFF until `STRIPE_PAYMENT_LINK_URL` is set. Paid status lives in Netlify Blobs, written by a Stripe webhook. No Stripe API key in this app
 
 ## Key Files
 
@@ -49,6 +50,10 @@ Do NOT add Vite proxy for `/api` routes — the plugin handles this.
 - `netlify/functions/lib/ga4-report.ts` — pure GA4 helpers: date ranges (current + previous period), batchRunReports request shapes, response parsing
 - `netlify/functions/cloudflare.mts` — GET /api/cloudflare — Cloudflare Web Analytics overview, or one site's detail with `?site=`
 - `netlify/functions/lib/cf-report.ts` — pure Cloudflare helpers: UTC date ranges, owner check, GraphQL queries, response parsing
+- `netlify/functions/stripe-webhook.mts` — POST /api/stripe-webhook — verifies the Stripe signature, records paid checkouts of our Payment Link
+- `netlify/functions/lib/plan.ts` — pure free/paid helpers: `applyFreeLimit()` (busiest 3 in full, rest name-only), `buildUpgradeUrl()`, `paymentsEnabled()`
+- `netlify/functions/lib/stripe-webhook.ts` — pure: `verifyStripeSignature()` (HMAC, 5-min tolerance), `parsePurchase()` (only our Payment Link, paid only)
+- `netlify/functions/lib/entitlements.ts` — Netlify Blobs: paid accounts (`entitlements` store) and the free plan's shown sites (`free-sets` store)
 
 ### Frontend (Vue 3)
 - `src/App.vue` — root component: LandingPage or Dashboard based on auth state
@@ -60,6 +65,7 @@ Do NOT add Vite proxy for `/api` routes — the plugin handles this.
 - `src/lib/formatters.ts` — number, bounce rate, duration formatting
 - `src/lib/compare.ts` — period-over-period deltas (% / percentage points), portfolio aggregation
 - `src/lib/sources.ts` — GA4/Cloudflare mixing: which metrics a source measures (`hasMetric`, "–" display), hostname pairing
+- `src/lib/pricing.ts` — FREE_PROPERTY_LIMIT, PRO_PRICE_LABEL, REFUND_DAYS — the one place to change the price/limit (landing page, upgrade card and server all import it)
 - `src/types/analytics.ts` — all shared TypeScript interfaces (incl. UserInfo)
 
 ### Components
@@ -67,6 +73,7 @@ Do NOT add Vite proxy for `/api` routes — the plugin handles this.
 - `SiteCard.vue` — glass morphism card per property
 - `SiteTable.vue` — dense sortable table view
 - `AggregateKPIs.vue` — portfolio-wide totals above the property list (GA4 only)
+- `UpgradeCard.vue` — free plan: the user's hidden site names + "See all my sites · $19 once" (Stripe Payment Link)
 - `CloudflareKPIs.vue` — separate totals row for Cloudflare sites (sessions = visits, pageviews)
 - `SourceBadge.vue` — "GA4" / "Cloudflare" label, only shown when Cloudflare sites are in the list
 - `PropertyDetail.vue` — single-property breakdown (pages, devices, countries)
@@ -91,6 +98,11 @@ ALLOWED_EMAILS        # Comma-separated email allowlist (empty = allow all authe
 CLOUDFLARE_API_TOKEN  # Token with Account Analytics: Read (+ Account Settings: Read to list sites without traffic)
 CLOUDFLARE_ACCOUNT_ID # Cloudflare account that owns the Web Analytics sites
 CF_OWNER_EMAIL        # The only email that sees Cloudflare data; unset = nobody
+
+# Optional — one-time payment (unset STRIPE_PAYMENT_LINK_URL = no paywall, everyone sees every site)
+STRIPE_PAYMENT_LINK_URL # https://buy.stripe.com/... — one-time price; after-payment redirect https://statpilot.mom/?upgraded=1
+STRIPE_PAYMENT_LINK_ID  # plink_... — the webhook ignores every other checkout on the Stripe account
+STRIPE_WEBHOOK_SECRET   # whsec_... — signing secret of the endpoint https://statpilot.mom/api/stripe-webhook (events: checkout.session.completed, checkout.session.async_payment_succeeded)
 ```
 
 Unset token/account ID → dashboard is exactly GA4-only, plus a one-line hint for the owner.
@@ -104,6 +116,16 @@ Unset token/account ID → dashboard is exactly GA4-only, plus a one-line hint f
 - `GET /api/analytics-detail?property=<id>&days=7d|30d|90d` — header `Authorization: Bearer <jwt>`, returns DetailResponse (top 10 pages, device breakdown, top 10 countries). `property` is required — a missing param returns 400.
 - `GET /api/cloudflare?days=7d|30d|90d` — header `Authorization: Bearer <jwt>`, returns CloudflareReportResponse (PropertyResults with `source: 'cloudflare'`, id `cloudflare:<siteTag>`, plus an owner-only `notice`). Non-owners: 200 with an empty list
 - `GET /api/cloudflare?site=cloudflare:<siteTag>&days=…` — DetailResponse for one site (pages, referrers, countries, devices). Non-owner 404, bad site 400
+- `POST /api/stripe-webhook` — Stripe only. Bad signature 400; env missing 503 (Stripe retries); other products' checkouts 200 `ignored`
+- With payments on, `/api/analytics` adds `plan: { tier, lockedProperties, upgradeUrl }`; `/api/analytics-detail` returns 402 for a free user's locked site
+
+## Free vs Paid
+
+- Free set = top 3 by sessions in the requested range (failed properties last). Saved to Blobs `free-sets/<sub>` on each overview call; deleted on logout
+- Upgrade link = Payment Link + `?client_reference_id=<google sub>`. Webhook writes `entitlements/user/<sub>` and `entitlements/email/<email>` (email = fallback when the link was opened without the ID)
+- After paying, Stripe redirects to `/?upgraded=1` → `confirmUpgrade()` clears the cached reports and refetches until the plan is pro (~20 s max)
+- Grant by hand: `netlify blobs:set entitlements user/<sub> '{"tier":"pro","paidAt":"…","checkoutSessionId":"manual","email":null,"amountTotal":null,"currency":null}'`. Refund = delete `user/<sub>` and `email/<email>`
+- The owner (Marc) needs a manual grant before payments are switched on, or his own dashboard shows 3 sites
 
 ## Cloudflare Web Analytics
 
@@ -114,7 +136,7 @@ Unset token/account ID → dashboard is exactly GA4-only, plus a one-line hint f
 - **Node cap per request:** not documented; 26 nodes (90d overview) works, 52 was refused ("too many nodes") → the detail view sends one request per breakdown (pages/referrers/countries/devices, ≤13 nodes each) in parallel. Each node counts toward the 300 queries / 5 min GraphQL quota
 - Site list `GET /accounts/{id}/rum/site_info/list` needs **Account Settings: Read**. The current token only has Account Analytics: Read, so it returns 403 and the function falls back to sites seen in the traffic data (sites with zero traffic in both periods don't show)
 - Same hostname on GA4 + Cloudflare → `pairByHost()` puts them next to each other (GA4 first); in the card grid `pairStartIds()` starts a new row so the pair sits side by side. Never summed
-- Frontend: separate list + cache key `ga4:v3:cf:<userId>:<range>`; a Cloudflare failure only sets the one-line notice, never the GA4 error banner
+- Frontend: separate list + cache key `ga4:v4:cf:<userId>:<range>`; a Cloudflare failure only sets the one-line notice, never the GA4 error banner
 
 ## Conventions
 
@@ -149,7 +171,7 @@ Unset token/account ID → dashboard is exactly GA4-only, plus a one-line hint f
 4. Auto-discovers user's GA4 properties via Admin API (accountSummaries)
 5. Fans out REST requests to GA4 runReport per property (batches of 10)
 6. Each property gets ONE batchRunReports call with 3 reports: daily trend, totals (current + previous period, no dimensions), top-5 traffic sources. Headline numbers come from the totals report — never sum activeUsers across days (users aren't additive)
-7. Response cached in localStorage (namespaced by user ID, versioned prefix `ga4:v3` — bump when the data shape/meaning changes). Stale-while-revalidate: <1h old and same day = fresh; otherwise shown immediately and refetched in the background; hard expiry 24h
+7. Response cached in localStorage (namespaced by user ID, versioned prefix `ga4:v4` — bump when the data shape/meaning changes). Stale-while-revalidate: <1h old and same day = fresh; otherwise shown immediately and refetched in the background; hard expiry 24h
 
 ## GCP Setup
 

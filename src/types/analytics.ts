@@ -55,6 +55,22 @@ export interface ReportResponse {
   generatedAt: string
   dateRange: DateRange
   properties: PropertyResult[]
+  /** Free vs paid state. Absent while payments aren't configured (everyone sees everything). */
+  plan?: PlanInfo
+}
+
+/** A site hidden on the free plan: its name only, no numbers. */
+export interface LockedProperty {
+  displayName: string
+  websiteUrl?: string
+}
+
+export interface PlanInfo {
+  tier: 'free' | 'pro'
+  /** Sites listed by name only until the user pays (empty on pro) */
+  lockedProperties: LockedProperty[]
+  /** Stripe Payment Link carrying this user's ID; null on pro */
+  upgradeUrl: string | null
 }
 
 /** GET /api/cloudflare — Cloudflare Web Analytics sites as PropertyResults. */

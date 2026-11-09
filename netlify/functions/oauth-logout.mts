@@ -8,6 +8,7 @@
 import type { Context } from '@netlify/functions'
 import { JSON_HEADERS, validateSession } from './lib/auth.js'
 import { getUserTokens, deleteUserTokens } from './lib/tokens.js'
+import { deleteFreeSet } from './lib/entitlements.js'
 
 // POST /api/oauth/logout
 // Header: Authorization: Bearer <jwt>
@@ -60,6 +61,9 @@ export default async (request: Request, _context: Context): Promise<Response> =>
       { status: 500, headers: JSON_HEADERS }
     )
   }
+
+  // Free-plan site list (privacy policy: deleted on logout). Paid status stays.
+  await deleteFreeSet(userId)
 
   return new Response(
     JSON.stringify({ success: true }),

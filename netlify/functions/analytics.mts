@@ -18,6 +18,8 @@ import type {
 } from '../../src/types/analytics.js'
 import { JSON_HEADERS, validateSession } from './lib/auth.js'
 import { getValidAccessToken } from './lib/tokens.js'
+import { applyFreeLimit, buildUpgradeUrl, paymentsEnabled } from './lib/plan.js'
+import { getTier, saveFreeSet } from './lib/entitlements.js'
 import {
   parseDaysParam,
   buildOverviewRequests,
@@ -236,6 +238,36 @@ async function fetchProperty(
 }
 
 // ---------------------------------------------------------------------------
+// Free vs paid
+// ---------------------------------------------------------------------------
+
+/**
+ * Until a Payment Link is configured (STRIPE_PAYMENT_LINK_URL) everyone gets
+ * every site and no plan info. After that, free accounts get their busiest
+ * sites in full and the rest by name only; the detail endpoint reads the
+ * saved free set.
+ */
+async function applyPlan(
+  userId: string,
+  email: string,
+  results: PropertyResult[],
+): Promise<Pick<ReportResponse, 'properties' | 'plan'>> {
+  const paymentLinkUrl = process.env.STRIPE_PAYMENT_LINK_URL
+  if (!paymentsEnabled(paymentLinkUrl)) return { properties: results }
+
+  if (await getTier(userId, email) === 'pro') {
+    return { properties: results, plan: { tier: 'pro', lockedProperties: [], upgradeUrl: null } }
+  }
+
+  const { visible, locked } = applyFreeLimit(results)
+  await saveFreeSet(userId, visible.map((p) => p.propertyId))
+  return {
+    properties: visible,
+    plan: { tier: 'free', lockedProperties: locked, upgradeUrl: buildUpgradeUrl(paymentLinkUrl, userId) },
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
 
@@ -371,7 +403,7 @@ export default async (request: Request, _context: Context): Promise<Response> =>
     const report: ReportResponse = {
       generatedAt: new Date().toISOString(),
       dateRange:   days,
-      properties:  results,
+      ...(await applyPlan(session.sub, session.email, results)),
     }
 
     return new Response(

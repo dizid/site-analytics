@@ -48,6 +48,34 @@ function readingTime(text) {
   return Math.max(1, Math.ceil(words / 250));
 }
 
+// Top menu shared by the post and index pages — same links as the landing page menu
+const NAV_CSS = `
+    .site-nav { position: sticky; top: 0; z-index: 10; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(6px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+    .site-nav-inner { max-width: 960px; margin: 0 auto; padding: 0.75rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .site-nav-brand { display: inline-flex; align-items: center; gap: 0.5rem; color: #f8fafc; font-weight: 700; font-size: 0.875rem; text-decoration: none; }
+    .site-nav-brand span { width: 8px; height: 8px; border-radius: 50%; background: #2d8cf0; }
+    .site-nav-links { display: flex; align-items: center; gap: 0.25rem; }
+    .site-nav-links a { color: #94a3b8; font-size: 0.875rem; text-decoration: none; padding: 0.5rem 0.625rem; border-radius: 0.5rem; }
+    .site-nav-links a:hover { color: #f8fafc; }
+    .site-nav-links a.site-nav-cta { background: #2d8cf0; color: #fff; font-weight: 600; padding: 0.5rem 0.875rem; }
+    .site-nav-links a.site-nav-cta:hover { background: #1a75e0; }
+    @media (max-width: 480px) { .site-nav-links a.site-nav-hide-xs { display: none; } }
+`;
+
+const NAV_HTML = `
+  <nav class="site-nav" aria-label="Main">
+    <div class="site-nav-inner">
+      <a href="/" class="site-nav-brand"><span aria-hidden="true"></span>StatPilot</a>
+      <div class="site-nav-links">
+        <a href="/#features" class="site-nav-hide-xs">Features</a>
+        <a href="/#pricing">Pricing</a>
+        <a href="/blog/">Blog</a>
+        <a href="/" class="site-nav-cta">Try free</a>
+      </div>
+    </div>
+  </nav>
+`;
+
 // HTML template for a single blog post (matches privacy.html design)
 function postTemplate(meta, htmlContent) {
   const title = `${meta.title} — StatPilot`;
@@ -295,9 +323,11 @@ function postTemplate(meta, htmlContent) {
       .article table { font-size: 0.8125rem; }
       .article th, .article td { padding: 0.375rem 0.5rem; }
     }
+${NAV_CSS}
   </style>
 </head>
 <body>
+${NAV_HTML}
   <div class="container">
 
     <a href="/blog" class="back-link">
@@ -490,9 +520,11 @@ function indexTemplate(posts) {
       h1 { font-size: 1.375rem; }
       .card { padding: 1.25rem; }
     }
+${NAV_CSS}
   </style>
 </head>
 <body>
+${NAV_HTML}
   <div class="container">
 
     <a href="/" class="back-link">
@@ -581,6 +613,28 @@ async function main() {
   await mkdir(OUTPUT_DIR, { recursive: true });
   await writeFile(join(OUTPUT_DIR, 'index.html'), indexTemplate(posts));
   console.log(`  Blog: index.html (${posts.length} post${posts.length === 1 ? '' : 's'})`);
+
+  // Sitemap lists every post, so new posts need no manual edit
+  await writeFile('dist/sitemap.xml', sitemapXml(posts));
+  console.log(`  Sitemap: dist/sitemap.xml (${posts.length + 4} URLs)`);
+}
+
+// sitemap.xml for the whole site: fixed pages + every post (replaces public/sitemap.xml in dist)
+function sitemapXml(posts) {
+  const newest = posts[0]?.meta.date || new Date().toISOString().slice(0, 10);
+  const entry = (path, lastmod, changefreq, priority) =>
+    `  <url>\n    <loc>${SITE_URL}${path}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`;
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    entry('/', newest, 'monthly', '1.0'),
+    entry('/blog/', newest, 'weekly', '0.7'),
+    ...posts.map((post) => entry(`/blog/${post.meta.slug}/`, post.meta.date, 'monthly', '0.8')),
+    entry('/privacy', '2026-11-03', 'yearly', '0.2'),
+    entry('/terms', '2026-11-03', 'yearly', '0.2'),
+    '</urlset>',
+    '',
+  ].join('\n');
 }
 
 main().catch(err => {

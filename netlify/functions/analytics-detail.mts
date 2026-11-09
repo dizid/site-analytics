@@ -19,6 +19,8 @@ import type {
 } from '../../src/types/analytics.js'
 import { JSON_HEADERS, validateSession } from './lib/auth.js'
 import { getValidAccessToken } from './lib/tokens.js'
+import { paymentsEnabled } from './lib/plan.js'
+import { getTier, getFreeSet } from './lib/entitlements.js'
 
 // GA4 Data API base URL (uses full property resource name)
 const DATA_API_BASE = 'https://analyticsdata.googleapis.com/v1beta'
@@ -171,6 +173,18 @@ export default async (request: Request, _context: Context): Promise<Response> =>
     return new Response(
       JSON.stringify({ error: 'Missing required query param: property' }),
       { status: 400, headers: JSON_HEADERS }
+    )
+  }
+
+  // Free plan: details only for the sites the overview shows in full
+  if (
+    paymentsEnabled(process.env.STRIPE_PAYMENT_LINK_URL)
+    && await getTier(session.sub, session.email) === 'free'
+    && !(await getFreeSet(session.sub)).includes(propertyId)
+  ) {
+    return new Response(
+      JSON.stringify({ error: 'This site is part of the paid plan. Unlock all sites to see its details.' }),
+      { status: 402, headers: JSON_HEADERS }
     )
   }
 
