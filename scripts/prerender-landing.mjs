@@ -22,6 +22,20 @@ const EMPTY_APP = '<div id="app"></div>'
 // The landing page is ~9k characters of markup; far less means the render broke
 const MIN_HTML_LENGTH = 2000
 
+// The landing page's pricing section lists monthly plans ($19/mo, $49/mo) that
+// can't be bought yet (no checkout on main; the pro-tier branch replaces them with
+// a one-time Pro). While it lists per-month prices, leave it out of the copy that
+// crawlers read, so AI answers don't quote plans nobody can buy. Browsers still
+// show it once the app mounts; a section without "/mo" is kept automatically.
+const PRICING_SECTION_RE = /<section\b[^>]*aria-labelledby="pricing-heading"[^>]*>[\s\S]*?<\/section>/
+
+/** Drop the pricing section from the prerendered HTML while it shows unbuyable monthly plans. */
+function withoutUnbuyablePlans(html) {
+  const pricingSection = html.match(PRICING_SECTION_RE)
+  if (!pricingSection || !pricingSection[0].includes('/mo')) return html
+  return html.replace(pricingSection[0], '')
+}
+
 const vite = await createServer({
   configFile: false, // skip the app config (Netlify emulation, Tailwind): only SFC compilation is needed
   plugins: [vue()],
@@ -33,7 +47,7 @@ const vite = await createServer({
 
 try {
   const { renderLanding } = await vite.ssrLoadModule('/src/prerender-entry.ts')
-  const landingHtml = await renderLanding()
+  const landingHtml = withoutUnbuyablePlans(await renderLanding())
   if (landingHtml.length < MIN_HTML_LENGTH) {
     throw new Error(`prerendered landing page is only ${landingHtml.length} characters`)
   }
