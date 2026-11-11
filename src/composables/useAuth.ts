@@ -26,8 +26,9 @@ const isLoading = ref(true)
 const user = ref<UserInfo | null>(null)
 const error = ref<string | null>(null)
 
-// Initialize immediately on module load
-initAuth()
+// Initialize immediately on module load (browser only: the build-time
+// prerender of the landing page, scripts/prerender-landing.mjs, has no window)
+if (!import.meta.env.SSR) initAuth()
 
 // ---------------------------------------------------------------------------
 // Initialization

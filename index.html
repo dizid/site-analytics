@@ -44,6 +44,21 @@
       }
     }
     </script>
+
+    <!--
+      #app holds a build-time copy of the landing page (scripts/prerender-landing.mjs)
+      so crawlers without JavaScript can read it. Signed-in visitors (stored session,
+      or arriving from Google sign-in with #token=) skip that copy until the app mounts.
+      Keep the key in step with STORAGE_KEY in src/composables/useAuth.ts.
+    -->
+    <script>
+      try {
+        if (localStorage.getItem('ga4:session-jwt') || location.hash.indexOf('#token=') === 0) {
+          document.documentElement.classList.add('has-session')
+        }
+      } catch (e) { /* storage blocked: show the landing copy */ }
+    </script>
+    <style>.has-session [data-prerendered] { display: none; }</style>
   </head>
   <body>
     <div id="app"></div>

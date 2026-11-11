@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build && node scripts/build-blog.mjs",
+    "build": "vue-tsc -b && vite build && node scripts/prerender-landing.mjs && node scripts/build-blog.mjs",
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run"
