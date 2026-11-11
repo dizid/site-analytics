@@ -8,6 +8,8 @@
 - Access: early access by invite (Google's OAuth testing mode) until Google verifies the app.
 
 ## Guides
+- [GA4 Data API Quotas: Tokens and Limits for Multi-Site Dashboards](https://statpilot.mom/blog/ga4-data-api-quotas-multi-site/): Google's standard vs 360 token limits per property (day, hour, per project), what a request costs, worked sums for many sites, RESOURCE_EXHAUSTED and how to stay inside.
+- [GA4 Property Not Showing? How to Check and Fix Access](https://statpilot.mom/blog/ga4-property-not-showing-access/): account vs property access, GA4 roles, the common reasons a property is missing (wrong Google account, another organization, old Universal Analytics) and how to grant access.
 - [GA4 Roll-Up Properties: How to Combine Properties Without 360](https://statpilot.mom/blog/ga4-roll-up-properties-without-360/): roll-up properties and subproperties are Analytics 360 features; four options without 360 (switching properties, Data Studio, the Data API, a multi-property dashboard).
 - [Multiple GA4 Properties in Looker Studio (Now Data Studio)](https://statpilot.mom/blog/ga4-multiple-properties-looker-studio/): several GA4 properties in one report, blends of up to 5 sources, and GA4 quota errors with Google's numbers.
 - [GA4 Multi-Property Dashboard: Your Options Compared](https://statpilot.mom/blog/ga4-multi-property-dashboard-comparison-2026/): AgencyAnalytics, Databox, DashThis, AnalyticsPortfolio and StatPilot compared.
