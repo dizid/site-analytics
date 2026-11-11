@@ -169,5 +169,7 @@ Unset token/account ID → dashboard is exactly GA4-only, plus a one-line hint f
 - Netlify site: `ga-analytics-app` (ID: `2290a935-eef6-4cee-8611-eaed351f9ffa`)
 - GitHub repo: `https://github.com/dizid/site-analytics.git`
 - **IndexNow** (since 2026-11-11, T-0371): key file `public/87ccd8ce9a2249fa84889e943460b3c0.txt` (public by design). After a production deploy that adds or changes pages: `npm run indexnow -- /blog/<slug>` (only those pages) or `npm run indexnow` (every URL in the live sitemap). It refuses to submit until the key file is live.
+- **Unknown URLs** (since 2026-11-11, T-0401): the last rule in `netlify.toml` serves `public/404.html` with status 404 (was the landing page with 200 = soft 404s). The app has no client-side routes; a new top-level path needs its own rule above the catch-all.
+- **Blog** (markdown in `content/blog/`, built by `scripts/build-blog.mjs` with BlogPosting JSON-LD since T-0398): a new post must also be added by hand to `public/sitemap.xml` and `public/llms.txt` (## Guides), then `npm run indexnow -- /blog/<slug>/` after the deploy. While sign-in is invite-only, end posts with the early-access invite line (Chief pick T-0385) and don't offer the monthly plans (T-0375).
 - Local dev port: `5173` (Vite default)
 - Cloudflare account ID: `1a3afa040196e3ae86cb84c0ef5c5dee` (`CLOUDFLARE_API_TOKEN` is a user API token, set in Netlify 2026-10-20; copy in gitignored `dev.md`)
