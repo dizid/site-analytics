@@ -1,0 +1,16 @@
+# StatPilot
+
+> StatPilot (https://statpilot.mom) is a Google Analytics 4 dashboard for people who run several websites. You sign in with Google once; it finds every GA4 property your Google account can access and shows them all on one screen, with no per-site setup. It reads GA4 only (read-only access), not Google Ads, Facebook or Stripe. StatPilot is in early access: sign-in is open to invited testers for now, free for up to 3 properties. Invites: hello@dizid.com. Made by Dizid Web Development (https://dizid.com).
+
+## How it works
+- Sign-in: Google OAuth with the read-only Analytics scope; properties are discovered automatically through the Google Analytics APIs.
+- Data: pulled from the GA4 Data API per property; cached in the browser, not stored in a database.
+- Access: early access by invite (Google's OAuth testing mode) until Google verifies the app.
+
+## Guides
+- [GA4 Roll-Up Properties: How to Combine Properties Without 360](https://statpilot.mom/blog/ga4-roll-up-properties-without-360/): roll-up properties and subproperties are Analytics 360 features; four options without 360 (switching properties, Data Studio, the Data API, a multi-property dashboard).
+- [Multiple GA4 Properties in Looker Studio (Now Data Studio)](https://statpilot.mom/blog/ga4-multiple-properties-looker-studio/): several GA4 properties in one report, blends of up to 5 sources, and GA4 quota errors with Google's numbers.
+- [GA4 Multi-Property Dashboard: Your Options Compared](https://statpilot.mom/blog/ga4-multi-property-dashboard-comparison-2026/): AgencyAnalytics, Databox, DashThis, AnalyticsPortfolio and StatPilot compared.
+
+## About
+- [Privacy Policy](https://statpilot.mom/privacy), [Terms of Service](https://statpilot.mom/terms).
