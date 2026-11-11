@@ -8,6 +8,8 @@
 - Access: early access by invite (Google's OAuth testing mode) until Google verifies the app.
 
 ## Guides
+- [Comparing Traffic Across Sites in GA4: Which Metrics to Use](https://statpilot.mom/blog/compare-traffic-across-sites-ga4/): users vs sessions, engagement rate vs bounce rate, key events, and the settings (time zone, filters, consent) that skew cross-site comparisons.
+- [GA4 Numbers Don't Match? Thresholds, (other) Row and Sampling](https://statpilot.mom/blog/ga4-numbers-differ-thresholds-other-row/): why reports, explorations, the Data API and Data Studio show different numbers, and how to compare like with like.
 - [GA4 Traffic Dropped? How to Find the Cause](https://statpilot.mom/blog/ga4-traffic-drop-find-the-cause/): tracking gap or real drop: data freshness, Realtime and DebugView, consent mode, data filters, time zone, change history and annotations; then Search Console, Google's ranking updates (incl. the November 2026 core update) and Google Trends.
 - [GA4 Data API Quotas: Tokens and Limits for Multi-Site Dashboards](https://statpilot.mom/blog/ga4-data-api-quotas-multi-site/): Google's standard vs 360 token limits per property (day, hour, per project), what a request costs, worked sums for many sites, RESOURCE_EXHAUSTED and how to stay inside.
 - [GA4 Property Not Showing? How to Check and Fix Access](https://statpilot.mom/blog/ga4-property-not-showing-access/): account vs property access, GA4 roles, the common reasons a property is missing (wrong Google account, another organization, old Universal Analytics) and how to grant access.
