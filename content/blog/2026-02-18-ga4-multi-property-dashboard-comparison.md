@@ -1,6 +1,7 @@
 ---
 title: "GA4 Multi-Property Dashboard: Your Options Compared [2026]"
 date: 2026-02-18
+updated: 2026-11-11
 author: Marc
 description: "Running 5+ websites and tired of tab-switching in GA4? Here's an honest comparison of every multi-property dashboard tool available in 2026."
 tags: ["ga4", "analytics", "dashboard", "multi-property", "comparison"]
@@ -11,7 +12,7 @@ slug: "ga4-multi-property-dashboard-comparison-2026"
 
 If you run more than two websites, you already know the problem. Google Analytics 4 has no overview screen. There is no "all sites" page. You pick a property from the dropdown, look at the numbers, switch to the next property, try to hold both sets of numbers in your head, and repeat. It is genuinely one of the most frustrating parts of managing a portfolio of sites.
 
-Google's rationale is that GA4 is property-scoped by design. Roll-up properties exist, but they are a GA4 360 feature, which starts at $50,000 per year. Not exactly an option if you are a developer with a handful of side projects or a solo founder running multiple products.
+Google's rationale is that GA4 is property-scoped by design. Roll-up properties exist, but they are an Analytics 360 feature, the paid edition Google sells through its sales team and partners ([more on roll-up properties](/blog/ga4-roll-up-properties-without-360/)). Not exactly an option if you are a developer with a handful of side projects or a solo founder running multiple products.
 
 So the real question is: what do you use instead?
 

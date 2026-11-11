@@ -48,6 +48,28 @@ function readingTime(text) {
   return Math.max(1, Math.ceil(words / 250));
 }
 
+// BlogPosting JSON-LD for one post. '<' is escaped so a title can never close the script tag.
+function articleJsonLd(meta, canonical) {
+  const authorName = meta.author || 'Marc';
+  const author = authorName === 'StatPilot'
+    ? { '@type': 'Organization', name: 'StatPilot', url: SITE_URL }
+    : { '@type': 'Person', name: authorName };
+  return JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: meta.title,
+    description: meta.description || '',
+    datePublished: meta.date,
+    dateModified: meta.updated || meta.date,
+    inLanguage: 'en',
+    url: canonical,
+    mainEntityOfPage: canonical,
+    image: `${SITE_URL}/og-image.png`,
+    author,
+    publisher: { '@type': 'Organization', name: 'StatPilot', url: SITE_URL }
+  }).replace(/</g, '\\u003c');
+}
+
 // HTML template for a single blog post (matches privacy.html design)
 function postTemplate(meta, htmlContent) {
   const title = `${meta.title} — StatPilot`;
@@ -73,10 +95,16 @@ function postTemplate(meta, htmlContent) {
   <meta property="article:published_time" content="${meta.date}" />
   <meta property="article:author" content="${meta.author || 'Marc'}" />
 
+  <meta property="og:image" content="${SITE_URL}/og-image.png" />
+
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${meta.title}" />
   <meta name="twitter:description" content="${description}" />
+  <meta name="twitter:image" content="${SITE_URL}/og-image.png" />
+
+  <!-- Structured data for search engines and AI crawlers -->
+  <script type="application/ld+json">${articleJsonLd(meta, canonical)}</script>
 
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <style>
