@@ -8,6 +8,8 @@
 - Access: early access by invite (Google's OAuth testing mode) until Google verifies the app.
 
 ## Guides
+- [GA4 Cross-Domain Measurement vs Separate Properties for Several Sites](https://statpilot.mom/blog/ga4-cross-domain-vs-separate-properties/): one property with cross-domain measurement, one property per site, or several streams in one property; what each does to users and sessions, referrals between your own sites, reporting, access and limits, with a decision table.
+- [GA4 Data Retention Settings: 2 vs 14 Months and What They Affect](https://statpilot.mom/blog/ga4-data-retention-settings/): the 2 and 14 month options (up to 50 months on 360), why only explorations and funnel reports are affected, reset on new activity, why to set it right away, and checking many properties with the Admin API.
 - [Handing a GA4 Property to a Client (or Taking One Over)](https://statpilot.mom/blog/ga4-property-handover-client/): who should own a client's property, moving a property between accounts (roles needed, what moves, what blocks it), sharing access instead, and stepping back after the handover.
 - [Comparing Traffic Across Sites in GA4: Which Metrics to Use](https://statpilot.mom/blog/compare-traffic-across-sites-ga4/): users vs sessions, engagement rate vs bounce rate, key events, and the settings (time zone, filters, consent) that skew cross-site comparisons.
 - [GA4 Numbers Don't Match? Thresholds, (other) Row and Sampling](https://statpilot.mom/blog/ga4-numbers-differ-thresholds-other-row/): why reports, explorations, the Data API and Data Studio show different numbers, and how to compare like with like.

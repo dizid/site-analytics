@@ -8,9 +8,21 @@
   </url>
   <url>
     <loc>https://statpilot.mom/blog/</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://statpilot.mom/blog/ga4-cross-domain-vs-separate-properties/</loc>
+    <lastmod>2026-11-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://statpilot.mom/blog/ga4-data-retention-settings/</loc>
+    <lastmod>2026-11-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://statpilot.mom/blog/ga4-property-handover-client/</loc>
