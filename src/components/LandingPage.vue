@@ -170,6 +170,17 @@ const plans = [
           Free for up to 3 properties. No credit card required.
         </p>
 
+        <!-- Early-access notice: Google sign-in is in OAuth "Testing" mode (GOOGLE.md),
+             so only invited test users can sign in until Google verifies the app. -->
+        <p class="mx-auto mt-5 max-w-sm rounded-lg border border-border bg-surface-card px-4 py-3 text-sm leading-relaxed text-text-secondary">
+          <strong class="font-semibold text-text-primary">Early access:</strong>
+          sign-in is open to invited testers for now. Want an invite? Email
+          <a
+            href="mailto:hello@dizid.com?subject=StatPilot%20early%20access"
+            class="font-medium text-accent underline underline-offset-2 hover:text-text-primary"
+          >hello@dizid.com</a>.
+        </p>
+
       </div>
     </section>
 
