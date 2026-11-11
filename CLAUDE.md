@@ -168,5 +168,6 @@ Unset token/account ID → dashboard is exactly GA4-only, plus a one-line hint f
 - Production URL: `https://statpilot.mom`
 - Netlify site: `ga-analytics-app` (ID: `2290a935-eef6-4cee-8611-eaed351f9ffa`)
 - GitHub repo: `https://github.com/dizid/site-analytics.git`
+- **IndexNow** (since 2026-11-11, T-0371): key file `public/87ccd8ce9a2249fa84889e943460b3c0.txt` (public by design). After a production deploy that adds or changes pages: `npm run indexnow -- /blog/<slug>` (only those pages) or `npm run indexnow` (every URL in the live sitemap). It refuses to submit until the key file is live.
 - Local dev port: `5173` (Vite default)
 - Cloudflare account ID: `1a3afa040196e3ae86cb84c0ef5c5dee` (`CLOUDFLARE_API_TOKEN` is a user API token, set in Netlify 2026-10-20; copy in gitignored `dev.md`)
