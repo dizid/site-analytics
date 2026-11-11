@@ -31,7 +31,7 @@ A few details from Google's help pages:
 - Users with the same reporting identity across sources (for example, the same user ID) are counted once in user metrics like Active users.
 - Custom dimensions and metrics are not inherited from the sources. You recreate them in the roll-up.
 
-A subproperty works the other way around. It takes one source property and holds a subset of its data, for example one region of a brand. Google positions subproperties mainly as a way to control which users can see which data ([About subproperties](https://support.google.com/analytics/answer/11525732)). They do not solve the "all my sites on one screen" problem by themselves.
+A subproperty works the other way around. It takes one source property and holds a subset of its data, for example one region of a brand. Google describes subproperties as a way to control which users can see which data, and to filter which events from the source property they hold ([About subproperties](https://support.google.com/analytics/answer/11525732)). They do not solve the "all my sites on one screen" problem by themselves.
 
 ## Who can use them, and what they cost
 
