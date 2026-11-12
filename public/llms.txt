@@ -8,6 +8,7 @@
 - Access: early access by invite (Google's OAuth testing mode) until Google verifies the app.
 
 ## Guides
+- [GA4 Traffic Dropped? How to Find the Cause](https://statpilot.mom/blog/ga4-traffic-drop-find-the-cause/): tracking gap or real drop: data freshness, Realtime and DebugView, consent mode, data filters, time zone, change history and annotations; then Search Console, Google's ranking updates (incl. the November 2026 core update) and Google Trends.
 - [GA4 Data API Quotas: Tokens and Limits for Multi-Site Dashboards](https://statpilot.mom/blog/ga4-data-api-quotas-multi-site/): Google's standard vs 360 token limits per property (day, hour, per project), what a request costs, worked sums for many sites, RESOURCE_EXHAUSTED and how to stay inside.
 - [GA4 Property Not Showing? How to Check and Fix Access](https://statpilot.mom/blog/ga4-property-not-showing-access/): account vs property access, GA4 roles, the common reasons a property is missing (wrong Google account, another organization, old Universal Analytics) and how to grant access.
 - [GA4 Roll-Up Properties: How to Combine Properties Without 360](https://statpilot.mom/blog/ga4-roll-up-properties-without-360/): roll-up properties and subproperties are Analytics 360 features; four options without 360 (switching properties, Data Studio, the Data API, a multi-property dashboard).
