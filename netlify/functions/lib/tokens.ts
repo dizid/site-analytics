@@ -52,16 +52,27 @@ export async function storeUserTokens(userId: string, data: StoredTokens): Promi
   await store.setJSON(userId, data)
 }
 
-/** Retrieves stored tokens for a user. Returns null if not found. */
-export async function getUserTokens(userId: string): Promise<StoredTokens | null> {
+/**
+ * Reads a user's stored tokens plus their version (ETag). null = none stored.
+ * A store that can't be read throws TokenRefreshUnavailableError ("try again"):
+ * treating an outage as "no tokens" logged people out.
+ */
+async function readUserTokens(userId: string): Promise<{ tokens: StoredTokens; etag?: string } | null> {
   const store = getUserTokenStore()
+  let entry: { data: unknown; etag?: string } | null
   try {
-    const data = await store.get(userId, { type: 'json' })
-    return (data as StoredTokens) ?? null
-  } catch {
-    // Blob not found or store access failed — treat as unauthenticated
-    return null
+    entry = await store.getWithMetadata(userId, { type: 'json' })
+  } catch (err) {
+    console.error('Token store read failed:', err)
+    throw new TokenRefreshUnavailableError('Token store unavailable')
   }
+  if (!entry || !entry.data) return null
+  return { tokens: entry.data as StoredTokens, etag: entry.etag }
+}
+
+/** Retrieves stored tokens for a user. Returns null if none are stored. */
+export async function getUserTokens(userId: string): Promise<StoredTokens | null> {
+  return (await readUserTokens(userId))?.tokens ?? null
 }
 
 /** Removes stored tokens (on logout or auth failure). */
@@ -176,11 +187,12 @@ const EXPIRY_BUFFER_MS = 5 * 60 * 1000
  * Throws if the user has no stored tokens or the refresh token is revoked.
  */
 export async function getValidAccessToken(userId: string): Promise<string> {
-  const stored = await getUserTokens(userId)
+  const entry = await readUserTokens(userId)
 
-  if (!stored) {
+  if (!entry) {
     throw new Error('No stored tokens for user — re-authentication required')
   }
+  const stored = entry.tokens
 
   // Return early if the stored access token is still fresh
   const isStillValid = stored.accessTokenExpiresAt - EXPIRY_BUFFER_MS > Date.now()
@@ -206,13 +218,25 @@ export async function getValidAccessToken(userId: string): Promise<string> {
     throw err instanceof TokenRefreshUnavailableError ? err : new TokenRefreshUnavailableError('Token refresh failed')
   }
 
-  // Persist the new access token (refresh token stays the same)
+  // Persist the new access token (refresh token stays the same), but only if
+  // the stored entry is still the one we read: a sign-out (tokens deleted) or a
+  // newer sign-in during this refresh must win, not be overwritten with these
+  // older tokens. Best effort: this request still gets its fresh token.
   const updated: StoredTokens = {
     ...stored,
     accessToken:          refreshResult.accessToken,
     accessTokenExpiresAt: refreshResult.expiresAt,
   }
-  await storeUserTokens(userId, updated)
+  try {
+    const store = getUserTokenStore()
+    if (entry.etag) {
+      await store.setJSON(userId, updated, { onlyIfMatch: entry.etag })
+    } else {
+      await store.setJSON(userId, updated)
+    }
+  } catch (err) {
+    console.error('Saving the refreshed access token failed:', err)
+  }
 
   return refreshResult.accessToken
 }

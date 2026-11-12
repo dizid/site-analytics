@@ -6,7 +6,8 @@
  */
 
 import type { Context } from '@netlify/functions'
-import { JSON_HEADERS, validateSession } from './lib/auth.js'
+import { JSON_HEADERS } from './lib/auth.js'
+import { sessionUserIdForLogout } from './lib/jwt.js'
 import { deleteUserTokens } from './lib/tokens.js'
 
 // POST /api/oauth/logout
@@ -23,11 +24,21 @@ export default async (request: Request, _context: Context): Promise<Response> =>
     )
   }
 
-  // Validate session JWT — get user ID
-  const session = await validateSession(request)
-  if (session instanceof Response) return session
-
-  const userId = session.sub
+  // Signed session token -> user ID. Unlike other endpoints, an expired
+  // session and the allowlist are not checked: signing out must always be able
+  // to delete the stored tokens (a 24 h+ old tab used to get a 401 and keep them).
+  const authHeader = request.headers.get('Authorization') ?? ''
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length).trim() : ''
+  let userId: string
+  try {
+    if (!token) throw new Error('missing token')
+    userId = await sessionUserIdForLogout(token)
+  } catch {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: JSON_HEADERS }
+    )
+  }
 
   // No Google revoke here: revoking cancels the grant for the whole Google
   // Cloud project, which also signed the user out on their other devices and in

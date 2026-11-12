@@ -3,7 +3,7 @@
  * Uses `jose` (HS256) — zero-config, no gRPC, ~40KB.
  */
 
-import { SignJWT, jwtVerify } from 'jose'
+import { SignJWT, jwtVerify, errors } from 'jose'
 
 export interface JwtPayload {
   sub: string     // Google user ID
@@ -62,5 +62,24 @@ export async function verifySessionJwt(token: string): Promise<JwtPayload> {
     picture: payload.picture as string,
     iat:     payload.iat ?? 0,
     exp:     payload.exp ?? 0,
+  }
+}
+
+/**
+ * The user id (sub) of a session token for sign-out: the signature must be
+ * valid, but an expired session is accepted. A tab left open past the 24 h
+ * session (common on phones) must still be able to delete the user's stored
+ * Google tokens; it used to get a 401 and the tokens stayed.
+ */
+export async function sessionUserIdForLogout(token: string): Promise<string> {
+  try {
+    return (await verifySessionJwt(token)).sub
+  } catch (err) {
+    // jose checks the signature before the claims, so an expired token's
+    // payload is authentic
+    if (err instanceof errors.JWTExpired && typeof err.payload?.sub === 'string') {
+      return err.payload.sub
+    }
+    throw err
   }
 }

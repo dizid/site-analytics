@@ -303,7 +303,7 @@ export default async (request: Request, _context: Context): Promise<Response> =>
       if (err instanceof TokenRefreshUnavailableError) {
         console.error('Google token refresh temporarily unavailable:', err.message)
         return new Response(
-          JSON.stringify({ error: "Google didn't respond. Please try again in a minute." }),
+          JSON.stringify({ error: "Couldn't reach your Google connection right now. Please try again in a minute." }),
           { status: 503, headers: JSON_HEADERS }
         )
       }
