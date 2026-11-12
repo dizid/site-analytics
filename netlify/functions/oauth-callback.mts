@@ -218,9 +218,6 @@ export default async (request: Request, _context: Context): Promise<Response> =>
       accessToken:          tokenResponse.access_token,
       // Google's expires_in is in seconds — convert to Unix ms
       accessTokenExpiresAt: Date.now() + tokenResponse.expires_in * 1000,
-      email,
-      name:    name ?? email,
-      picture: picture ?? '',
     })
   } catch (err) {
     console.error('Failed to store user tokens:', err)

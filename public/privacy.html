@@ -190,11 +190,11 @@
     <div class="header">
       <span class="brand"><span class="brand-dot"></span>StatPilot</span>
       <h1>Privacy Policy</h1>
-      <p class="meta">Effective date: February 18, 2026 &nbsp;&middot;&nbsp; Operated by Dizid Web Development</p>
+      <p class="meta">Effective date: February 18, 2026 &nbsp;&middot;&nbsp; Last updated: November 2026 &nbsp;&middot;&nbsp; Operated by Dizid Web Development</p>
     </div>
 
     <div class="intro">
-      Plain language summary: We only collect what Google gives us during sign-in, we store your refresh token securely server-side so you stay logged in, we cache analytics data in your browser only, and we never sell or share your data with anyone.
+      Plain language summary: We only collect what Google gives us during sign-in, we store your Google tokens securely server-side so you stay logged in, we cache analytics data in your browser only, and we never sell or share your data with anyone.
     </div>
 
     <h2>1. Who We Are</h2>
@@ -216,12 +216,12 @@
     <p>To keep you signed in and fetch your analytics data, Google issues us:</p>
     <ul>
       <li>A <strong>refresh token</strong> — stored server-side (see Section 4), used to obtain short-lived access tokens without requiring you to re-authenticate.</li>
-      <li>An <strong>access token</strong> — short-lived (1 hour), held in memory during a request cycle and never persisted.</li>
+      <li>An <strong>access token</strong> — short-lived (1 hour). It is stored server-side next to your refresh token (see Section 4) so it can be reused until it expires, then replaced with a new one.</li>
     </ul>
 
     <h3 style="font-size:0.9375rem; font-weight:600; color:#94a3b8; margin-top:1rem; margin-bottom:0.375rem;">2c. Google Analytics Data</h3>
     <p>With your permission (via the <code style="background:rgba(255,255,255,0.06);padding:0.1em 0.35em;border-radius:4px;font-size:0.875em">analytics.readonly</code> OAuth scope), we fetch aggregated metrics from your GA4 properties — such as page views, sessions, and traffic sources. This is your own analytics data; we only read it and display it to you.</p>
-    <p>Analytics data is <strong>not stored on our servers</strong>. It is cached in your browser's <code style="background:rgba(255,255,255,0.06);padding:0.1em 0.35em;border-radius:4px;font-size:0.875em">localStorage</code> with a 6-hour expiry and is never transmitted to us or any third party.</p>
+    <p>Analytics data is <strong>not stored on our servers</strong>. It is cached in your browser's <code style="background:rgba(255,255,255,0.06);padding:0.1em 0.35em;border-radius:4px;font-size:0.875em">localStorage</code> for up to 24 hours (the overview) or 6 hours (a single property's details) and is never transmitted to us or any third party.</p>
 
     <h3 style="font-size:0.9375rem; font-weight:600; color:#94a3b8; margin-top:1rem; margin-bottom:0.375rem;">2d. What We Do Not Collect</h3>
     <ul>
@@ -242,7 +242,7 @@
       <tbody>
         <tr>
           <td>Email address</td>
-          <td>Verify you are on the authorized access list; display in the dashboard header</td>
+          <td>Check you are on the invite list during early access; display in the dashboard header</td>
         </tr>
         <tr>
           <td>Name &amp; profile picture</td>
@@ -267,19 +267,19 @@
     <h2>4. Data Storage</h2>
 
     <h3 style="font-size:0.9375rem; font-weight:600; color:#94a3b8; margin-top:1rem; margin-bottom:0.375rem;">Server-side (Netlify Blobs)</h3>
-    <p>Your <strong>Google refresh token</strong> is stored in Netlify Blobs, a managed object-storage service. Netlify Blobs stores data encrypted at rest using AWS S3 server-side encryption (SSE-AES256). Data is keyed by your Google user ID and is accessible only to our serverless functions.</p>
-    <p>No other personal data is stored server-side.</p>
+    <p>Your <strong>Google refresh token</strong> and the current <strong>access token</strong> (valid about 1 hour) are stored in Netlify Blobs, a managed object-storage service. Netlify Blobs stores data encrypted at rest using AWS S3 server-side encryption (SSE-AES256). Data is keyed by your Google user ID and is accessible only to our serverless functions.</p>
+    <p>Nothing else about you is stored server-side: your email address, name and picture travel only in your session token in your own browser.</p>
 
     <h3 style="font-size:0.9375rem; font-weight:600; color:#94a3b8; margin-top:1rem; margin-bottom:0.375rem;">Browser-side</h3>
     <ul>
       <li><strong>Session JWT</strong> — stored in <code style="background:rgba(255,255,255,0.06);padding:0.1em 0.35em;border-radius:4px;font-size:0.875em">localStorage</code>. Contains your name, email, profile picture URL, and an expiry timestamp (24-hour TTL). Signed with HS256; not encrypted. Cleared when you log out or the token expires.</li>
-      <li><strong>Analytics cache</strong> — stored in <code style="background:rgba(255,255,255,0.06);padding:0.1em 0.35em;border-radius:4px;font-size:0.875em">localStorage</code>. Contains your GA4 metrics for faster page loads. 6-hour TTL. Contains aggregated website statistics, not personal information. Cleared when you log out.</li>
+      <li><strong>Analytics cache</strong> — stored in <code style="background:rgba(255,255,255,0.06);padding:0.1em 0.35em;border-radius:4px;font-size:0.875em">localStorage</code>. Contains your GA4 metrics for faster page loads. Expires after 24 hours (the overview) or 6 hours (a single property's details). Contains aggregated website statistics, not personal information. Cleared when you log out.</li>
     </ul>
 
     <h2>5. Cookies</h2>
     <p>We use exactly one cookie:</p>
     <ul>
-      <li><strong>oauth_state</strong> — an httpOnly, Secure, SameSite=Lax cookie set during the Google OAuth login flow. It contains a random CSRF-protection token, expires after 5 minutes, and is deleted immediately after sign-in completes. It is never used for tracking or advertising.</li>
+      <li><strong>oauth_state</strong> — an httpOnly, Secure, SameSite=Lax cookie set during the Google OAuth login flow. It contains a random CSRF-protection token, expires after 15 minutes, and is deleted immediately after sign-in completes. It is never used for tracking or advertising.</li>
     </ul>
     <p>We do not use tracking cookies, analytics cookies, advertising cookies, or any persistent cookies beyond the above.</p>
 
@@ -292,17 +292,17 @@
 
     <h2>7. Data Retention</h2>
     <ul>
-      <li><strong>Refresh tokens</strong> — retained in Netlify Blobs until you log out (which triggers deletion) or revoke access via your Google Account.</li>
+      <li><strong>Google tokens</strong> — retained in Netlify Blobs until you log out (which deletes them), until Google tells us they are no longer valid (for example after you revoke access in your Google Account, at your next visit), or until you ask us to delete them. If you stop using StatPilot without logging out, email us and we delete them.</li>
       <li><strong>Session JWT</strong> — expires after 24 hours; deleted on logout.</li>
-      <li><strong>Analytics cache</strong> — expires after 6 hours; deleted on logout.</li>
-      <li><strong>oauth_state cookie</strong> — expires after 5 minutes and is deleted immediately after sign-in.</li>
+      <li><strong>Analytics cache</strong> — expires after 24 hours (overview) or 6 hours (property details); deleted on logout.</li>
+      <li><strong>oauth_state cookie</strong> — expires after 15 minutes and is deleted immediately after sign-in.</li>
     </ul>
 
     <h2>8. Your Rights and Choices</h2>
     <p>You have full control over your data:</p>
     <ul>
-      <li><strong>Revoke access:</strong> Visit <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">Google Account &rarr; Security &rarr; Third-party access</a> and remove StatPilot. This invalidates your refresh token immediately. We will detect the revocation on the next API call and delete the stored token.</li>
-      <li><strong>Delete local data:</strong> Click "Logout" in the dashboard. This clears the session JWT, analytics cache, and triggers deletion of your refresh token from our servers.</li>
+      <li><strong>Revoke access:</strong> Visit <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">Google Account &rarr; Security &rarr; Third-party access</a> and remove StatPilot. This invalidates your refresh token immediately. StatPilot deletes its stored copy the next time you open the dashboard; to have it deleted sooner, log out first or email us.</li>
+      <li><strong>Delete local data:</strong> Click "Logout" in the dashboard. This clears the session JWT and analytics cache, and deletes your Google tokens from our servers.</li>
       <li><strong>Data portability:</strong> Your analytics data belongs to you and is held in Google Analytics. Export it directly via the Google Analytics interface.</li>
       <li><strong>Requests:</strong> For questions or deletion requests, email <a href="mailto:hello@dizid.com">hello@dizid.com</a>. We will respond within 30 days.</li>
     </ul>
@@ -315,7 +315,7 @@
       <li>Refresh tokens are stored encrypted at rest (AWS SSE-AES256)</li>
       <li>Session JWTs are signed and have a 24-hour expiry</li>
       <li>The <code style="background:rgba(255,255,255,0.06);padding:0.1em 0.35em;border-radius:4px;font-size:0.875em">oauth_state</code> cookie is httpOnly and Secure to prevent JavaScript access and CSRF attacks</li>
-      <li>Access to the dashboard is restricted by an email allowlist</li>
+      <li>During early access, sign-in is limited to invited email addresses</li>
     </ul>
     <p>No method of transmission or storage is 100% secure. We cannot guarantee absolute security.</p>
 

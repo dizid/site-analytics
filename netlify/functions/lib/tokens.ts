@@ -9,14 +9,14 @@ import { getStore } from '@netlify/blobs'
 // Types
 // ---------------------------------------------------------------------------
 
+// Only the tokens are stored. Records written before Nov 2026 also held the
+// user's email, name and picture (never read on the server: the session JWT
+// carries those); they are dropped the next time the access token is refreshed.
 export interface StoredTokens {
   refreshToken: string
   accessToken: string
   /** Unix milliseconds */
   accessTokenExpiresAt: number
-  email: string
-  name: string
-  picture: string
 }
 
 interface GoogleTokenResponse {
@@ -223,7 +223,7 @@ export async function getValidAccessToken(userId: string): Promise<string> {
   // newer sign-in during this refresh must win, not be overwritten with these
   // older tokens. Best effort: this request still gets its fresh token.
   const updated: StoredTokens = {
-    ...stored,
+    refreshToken:         stored.refreshToken,
     accessToken:          refreshResult.accessToken,
     accessTokenExpiresAt: refreshResult.expiresAt,
   }

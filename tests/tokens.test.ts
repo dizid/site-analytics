@@ -30,7 +30,7 @@ function seed(k: string, v: unknown) {
 
 import { getValidAccessToken, TokenRefreshUnavailableError } from '../netlify/functions/lib/tokens'
 
-const expired = { refreshToken: 'r1', accessToken: 'old', accessTokenExpiresAt: 0, email: 'a@b.c', name: 'A', picture: '' }
+const expired = { refreshToken: 'r1', accessToken: 'old', accessTokenExpiresAt: 0 }
 
 function googleAnswers(status: number, body: unknown) {
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(body), { status })))
