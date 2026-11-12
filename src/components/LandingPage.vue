@@ -427,13 +427,13 @@ const plans = [
 
         <nav class="flex gap-5" aria-label="Footer navigation">
           <a
-            href="#"
+            href="/privacy"
             class="text-xs text-text-muted transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent rounded"
           >
             Privacy
           </a>
           <a
-            href="#"
+            href="/terms"
             class="text-xs text-text-muted transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent rounded"
           >
             Terms

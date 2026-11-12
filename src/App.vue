@@ -136,6 +136,27 @@ watch(isAuthenticated, (auth) => {
           <LoadingSkeleton v-for="i in 6" :key="i" />
         </div>
 
+        <!-- No GA4 property on this Google account: the dashboard used to stay blank
+             with no word (audit M1) -->
+        <div
+          v-else-if="!isLoading && !error && lastFetchedAt && sortedProperties.length === 0"
+          role="status"
+          class="rounded-2xl border border-border bg-surface-card p-6 text-sm"
+        >
+          <p class="font-semibold text-text-primary mb-2">
+            No Google Analytics 4 properties found for {{ user?.email || 'this Google account' }}.
+          </p>
+          <p class="text-text-secondary mb-4">
+            StatPilot shows every GA4 property your Google account can read. If you expected your sites here,
+            you may have signed in with a different Google account, or this account only had old Universal Analytics
+            properties, which Google switched off in 2024.
+          </p>
+          <p class="flex flex-wrap gap-x-5 gap-y-2">
+            <a href="/blog/ga4-property-not-showing-access/" class="text-accent hover:underline">How to check and fix GA4 access</a>
+            <button type="button" class="text-accent hover:underline" @click="logout">Sign out (then sign in with the Google account that has access)</button>
+          </p>
+        </div>
+
         <!-- Card view -->
         <div v-else-if="viewMode === 'cards'" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <SiteCard
