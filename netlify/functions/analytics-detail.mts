@@ -18,7 +18,7 @@ import type {
   DetailResponse,
 } from '../../src/types/analytics.js'
 import { JSON_HEADERS, validateSession } from './lib/auth.js'
-import { getValidAccessToken } from './lib/tokens.js'
+import { getValidAccessToken, TokenRefreshUnavailableError } from './lib/tokens.js'
 
 // GA4 Data API base URL (uses full property resource name)
 const DATA_API_BASE = 'https://analyticsdata.googleapis.com/v1beta'
@@ -167,9 +167,9 @@ export default async (request: Request, _context: Context): Promise<Response> =>
   const propertyId = url.searchParams.get('property')
   const days = parseDaysParam(url)
 
-  if (!propertyId) {
+  if (!propertyId || !/^properties\/\d+$/.test(propertyId)) {
     return new Response(
-      JSON.stringify({ error: 'Missing required query param: property' }),
+      JSON.stringify({ error: 'Missing or invalid query param: property' }),
       { status: 400, headers: JSON_HEADERS }
     )
   }
@@ -182,6 +182,13 @@ export default async (request: Request, _context: Context): Promise<Response> =>
     try {
       token = await getValidAccessToken(session.sub)
     } catch (err) {
+      if (err instanceof TokenRefreshUnavailableError) {
+        console.error('Google token refresh temporarily unavailable:', err.message)
+        return new Response(
+          JSON.stringify({ error: "Google didn't respond. Please try again in a minute." }),
+          { status: 503, headers: JSON_HEADERS }
+        )
+      }
       const detail = err instanceof Error ? err.message : 'Unknown error'
       console.error(`Failed to get valid access token for user ${session.sub}:`, err)
       return new Response(

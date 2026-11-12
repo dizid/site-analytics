@@ -57,7 +57,7 @@ export default async (request: Request, _context: Context): Promise<Response> =>
     'HttpOnly',
     'Path=/',
     'SameSite=Lax',
-    'Max-Age=300', // 5 minutes — enough time to complete the OAuth flow
+    'Max-Age=900', // 15 minutes: 2-step verification or a new Google account can take longer than 5
   ]
   if (isProduction) {
     cookieParts.push('Secure')

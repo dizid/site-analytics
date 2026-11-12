@@ -17,7 +17,7 @@ import type {
   ReportResponse,
 } from '../../src/types/analytics.js'
 import { JSON_HEADERS, validateSession } from './lib/auth.js'
-import { getValidAccessToken } from './lib/tokens.js'
+import { getValidAccessToken, TokenRefreshUnavailableError } from './lib/tokens.js'
 import {
   parseDaysParam,
   buildOverviewRequests,
@@ -150,7 +150,9 @@ async function fetchWebsiteUrl(
 
     const data = await response.json() as DataStreamsResponse
     const webStream = data.dataStreams?.find(s => s.type === 'WEB_DATA_STREAM')
-    return webStream?.webStreamData?.defaultUri
+    const uri = webStream?.webStreamData?.defaultUri
+    // Shown as a clickable link: only plain web addresses (never javascript: etc.)
+    return typeof uri === 'string' && /^https?:\/\//i.test(uri) ? uri : undefined
   } catch {
     return undefined
   }
@@ -270,6 +272,13 @@ export default async (request: Request, _context: Context): Promise<Response> =>
     try {
       token = await getValidAccessToken(session.sub)
     } catch (err) {
+      if (err instanceof TokenRefreshUnavailableError) {
+        console.error('Google token refresh temporarily unavailable:', err.message)
+        return new Response(
+          JSON.stringify({ error: "Google didn't respond. Please try again in a minute." }),
+          { status: 503, headers: JSON_HEADERS }
+        )
+      }
       const detail = err instanceof Error ? err.message : 'Unknown error'
       console.error(`Failed to get valid access token for user ${session.sub}:`, err)
       return new Response(

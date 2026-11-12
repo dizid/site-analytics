@@ -43,6 +43,13 @@ export async function validateSession(request: Request): Promise<JwtPayload | Re
 
   try {
     const payload = await verifySessionJwt(token)
+    // Someone removed from ALLOWED_EMAILS loses access now, not when their 24 h session ends
+    if (!checkAllowedEmail(String(payload.email ?? ''))) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: JSON_HEADERS }
+      )
+    }
     return payload
   } catch (err) {
     // Token is expired, tampered, or otherwise invalid

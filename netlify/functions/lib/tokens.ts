@@ -25,14 +25,25 @@ interface GoogleTokenResponse {
   expires_in: number
   id_token?: string
   token_type: string
+  /** Space-separated scopes the user actually granted (Google lets users untick some) */
+  scope?: string
 }
+
+/** Google said the refresh token is no longer valid (revoked or expired): sign in again. */
+export class RefreshRevokedError extends Error {}
+
+/** Google or the network didn't answer properly: try again later, keep the tokens. */
+export class TokenRefreshUnavailableError extends Error {}
 
 // ---------------------------------------------------------------------------
 // Netlify Blobs helpers
 // ---------------------------------------------------------------------------
 
 function getUserTokenStore() {
-  return getStore('user-tokens')
+  // Strong consistency: with the default, a read within ~60 s of a write could
+  // return the old tokens (e.g. right after signing in again), and a failed
+  // refresh of those old tokens then deleted the fresh ones.
+  return getStore({ name: 'user-tokens', consistency: 'strong' })
 }
 
 /** Persists all token data for a user, keyed by their Google sub (user ID). */
@@ -112,21 +123,37 @@ export async function refreshAccessToken(
 ): Promise<{ accessToken: string; expiresAt: number }> {
   const { clientId, clientSecret } = getGoogleCredentials()
 
-  const response = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type:    'refresh_token',
-      refresh_token: refreshToken,
-      client_id:     clientId,
-      client_secret: clientSecret,
-    }),
-  })
+  let response: Response
+  try {
+    response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type:    'refresh_token',
+        refresh_token: refreshToken,
+        client_id:     clientId,
+        client_secret: clientSecret,
+      }),
+    })
+  } catch (err) {
+    throw new TokenRefreshUnavailableError(`Token refresh request failed: ${err instanceof Error ? err.message : 'network error'}`)
+  }
 
   if (!response.ok) {
     const body = await response.text()
     console.error(`Google token refresh failed (${response.status}): ${body}`)
-    throw new Error(`Token refresh failed: ${response.status}`)
+    // Only "invalid_grant" means the refresh token itself is dead; 5xx/429 and
+    // other errors are temporary and must not log the user out
+    let errorCode = ''
+    try {
+      errorCode = (JSON.parse(body) as { error?: string }).error ?? ''
+    } catch {
+      // not JSON
+    }
+    if (response.status === 400 && errorCode === 'invalid_grant') {
+      throw new RefreshRevokedError('Refresh token is invalid or revoked')
+    }
+    throw new TokenRefreshUnavailableError(`Token refresh failed: ${response.status}`)
   }
 
   const data = await response.json() as GoogleTokenResponse
@@ -166,9 +193,17 @@ export async function getValidAccessToken(userId: string): Promise<string> {
   try {
     refreshResult = await refreshAccessToken(stored.refreshToken)
   } catch (err) {
-    // Refresh token is revoked or expired — clean up and signal re-auth needed
-    await deleteUserTokens(userId)
-    throw new Error('Refresh token is invalid or revoked — re-authentication required')
+    if (err instanceof RefreshRevokedError) {
+      // Delete only if the stored token is still the one Google just refused
+      // (the user may have signed in again in the meantime)
+      const current = await getUserTokens(userId)
+      if (current?.refreshToken === stored.refreshToken) {
+        await deleteUserTokens(userId)
+      }
+      throw new Error('Refresh token is invalid or revoked — re-authentication required')
+    }
+    // Temporary problem: keep the tokens, let the caller say "try again"
+    throw err instanceof TokenRefreshUnavailableError ? err : new TokenRefreshUnavailableError('Token refresh failed')
   }
 
   // Persist the new access token (refresh token stays the same)

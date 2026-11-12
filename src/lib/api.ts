@@ -36,14 +36,21 @@ export async function apiFetch<T = unknown>(
   // JWT rejected or expired — clear local session and force re-login
   if (response.status === 401) {
     localStorage.removeItem('ga4:session-jwt')
+    try {
+      sessionStorage.setItem('ga4:session-ended', '1') // the landing page explains why
+    } catch {
+      // storage blocked
+    }
     window.location.reload()
     // Unreachable after reload, but keeps TypeScript happy
     throw new Error('Unauthorized — session expired')
   }
 
   if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: response.statusText }))
-    throw new Error((body as { error?: string }).error ?? `API error ${response.status}`)
+    // A platform error page (timeout, crash) isn't JSON and statusText is empty over
+    // HTTP/2: the message used to be '' and no error banner showed at all
+    const body = await response.json().catch(() => ({}))
+    throw new Error((body as { error?: string }).error || `Request failed (${response.status}). Please try again.`)
   }
 
   return response.json() as Promise<T>

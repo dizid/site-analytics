@@ -161,6 +161,17 @@ export default async (request: Request, _context: Context): Promise<Response> =>
   }
 
   // ------------------------------------------------------------------
+  // Google lets users untick the Analytics permission on the consent screen.
+  // Without it the dashboard can only show "insufficient authentication
+  // scopes", so stop here and ask them to sign in again with it ticked.
+  // ------------------------------------------------------------------
+  const grantedScopes = (tokenResponse.scope ?? '').split(' ')
+  if (tokenResponse.scope !== undefined && !grantedScopes.includes('https://www.googleapis.com/auth/analytics.readonly')) {
+    console.error('OAuth login without the analytics.readonly scope')
+    return htmlRedirect(`${siteUrl}/#error=missing_scope`, clearCookie)
+  }
+
+  // ------------------------------------------------------------------
   // Decode user info from id_token
   // ------------------------------------------------------------------
   if (!tokenResponse.id_token) {
@@ -187,7 +198,7 @@ export default async (request: Request, _context: Context): Promise<Response> =>
   // Email allowlist check
   // ------------------------------------------------------------------
   if (!checkAllowedEmail(email)) {
-    console.error(`OAuth login rejected — email not in allowlist: ${email}`)
+    console.error('OAuth login rejected — email not in allowlist') // no address in logs
     return htmlRedirect(`${siteUrl}/#error=not_authorized`, clearCookie)
   }
 

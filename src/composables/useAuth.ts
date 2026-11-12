@@ -15,6 +15,8 @@ import { ref, readonly } from 'vue'
 import type { UserInfo } from '../types/analytics'
 
 const STORAGE_KEY = 'ga4:session-jwt'
+/** Set by src/lib/api.ts when the server ends the session, so the landing page can say so */
+export const SESSION_ENDED_KEY = 'ga4:session-ended'
 
 // ---------------------------------------------------------------------------
 // Singleton state — declared outside the function so all callers share it
@@ -51,7 +53,11 @@ function initAuth(): void {
     error.value =
       errorCode === 'not_authorized'
         ? 'Your email is not authorized to access this dashboard.'
-        : 'Sign-in was cancelled or failed. Please try again.'
+        : errorCode === 'missing_scope'
+          ? 'StatPilot needs permission to see your Google Analytics data. Sign in again and leave the Google Analytics box ticked.'
+          : errorCode === 'state_mismatch'
+            ? 'The sign-in took too long or was started in another tab. Please try again.'
+            : 'Sign-in was cancelled or failed. Please try again.'
     history.replaceState(null, '', window.location.pathname)
     isLoading.value = false
     return
@@ -70,9 +76,20 @@ function initAuth(): void {
         picture: payload.picture as string,
       }
     } else {
-      // Token expired — clear it so the login screen shows
+      // Token expired — clear it so the login screen shows, and say why
       localStorage.removeItem(STORAGE_KEY)
+      error.value = 'Your session ended. Please sign in again.'
     }
+  }
+
+  // The server ended the session during a request (see src/lib/api.ts)
+  try {
+    if (sessionStorage.getItem(SESSION_ENDED_KEY)) {
+      sessionStorage.removeItem(SESSION_ENDED_KEY)
+      if (!isAuthenticated.value) error.value = 'Your session ended. Please sign in again.'
+    }
+  } catch {
+    // storage blocked
   }
 
   isLoading.value = false
@@ -87,16 +104,21 @@ function login(): void {
   window.location.href = '/api/oauth/authorize'
 }
 
-function logout(): void {
-  // Best-effort server-side revocation — fire and forget
+async function logout(): Promise<void> {
+  // Ask the server to delete the stored Google tokens, and wait for it, so a
+  // failure can be shown (it used to be fire-and-forget)
   const token = localStorage.getItem(STORAGE_KEY)
+  let serverFailed = false
   if (token) {
-    fetch('/api/oauth/logout', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    }).catch(() => {
-      // Ignore network errors — local cleanup happens regardless
-    })
+    try {
+      const response = await fetch('/api/oauth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      serverFailed = !response.ok && response.status !== 401
+    } catch {
+      serverFailed = true
+    }
   }
 
   // Wipe JWT and all namespaced analytics cache entries
@@ -109,7 +131,9 @@ function logout(): void {
 
   isAuthenticated.value = false
   user.value = null
-  error.value = null
+  error.value = serverFailed
+    ? "You're signed out here, but the server couldn't confirm it deleted your Google access. Sign in and out once more, or remove StatPilot under your Google Account's third-party access."
+    : null
 }
 
 /** Returns the raw JWT string for use in Authorization headers. */
@@ -141,7 +165,10 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
     // Base64url → base64 standard; parts[1] is the payload segment (always present after length check)
     const payloadSegment = parts[1] ?? ''
     const base64 = payloadSegment.replace(/-/g, '+').replace(/_/g, '/')
-    return JSON.parse(atob(base64)) as Record<string, unknown>
+    // atob gives bytes as Latin-1 characters; decode them as UTF-8 so names
+    // with accents ("José") don't show garbled
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
+    return JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>
   } catch {
     return null
   }

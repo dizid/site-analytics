@@ -101,6 +101,8 @@ export function buildOverviewRequests(days: DateRange): object[] {
       dimensions: [{ name: 'date' }],
       metrics: [{ name: 'sessions' }, { name: 'activeUsers' }],
       orderBys: [{ dimension: { dimensionName: 'date' } }],
+      // Keep zero-traffic days, so sparklines of quiet sites aren't shortened
+      keepEmptyRows: true,
     },
     {
       dateRanges: [

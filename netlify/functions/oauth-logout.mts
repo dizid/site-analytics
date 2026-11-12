@@ -7,7 +7,7 @@
 
 import type { Context } from '@netlify/functions'
 import { JSON_HEADERS, validateSession } from './lib/auth.js'
-import { getUserTokens, deleteUserTokens } from './lib/tokens.js'
+import { deleteUserTokens } from './lib/tokens.js'
 
 // POST /api/oauth/logout
 // Header: Authorization: Bearer <jwt>
@@ -29,27 +29,13 @@ export default async (request: Request, _context: Context): Promise<Response> =>
 
   const userId = session.sub
 
-  // Retrieve stored tokens to get the refresh token for revocation
-  const stored = await getUserTokens(userId)
+  // No Google revoke here: revoking cancels the grant for the whole Google
+  // Cloud project, which also signed the user out on their other devices and in
+  // the other app that shares this project. Logging out deletes StatPilot's
+  // stored tokens (what the privacy page promises); people can remove the
+  // grant itself under their Google Account's third-party access.
 
-  if (stored?.refreshToken) {
-    // Revoke the refresh token with Google — best effort, don't fail logout if this errors
-    try {
-      const revokeResponse = await fetch(
-        `https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(stored.refreshToken)}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-      )
-
-      if (!revokeResponse.ok) {
-        // Not fatal — token may already be revoked or expired
-        console.error(`Google token revocation returned ${revokeResponse.status} — continuing logout`)
-      }
-    } catch (err) {
-      console.error('Google token revocation request failed (non-fatal):', err)
-    }
-  }
-
-  // Delete stored tokens from Netlify Blobs regardless of revocation result
+  // Delete stored tokens from Netlify Blobs
   try {
     await deleteUserTokens(userId)
   } catch (err) {
