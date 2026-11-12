@@ -5,9 +5,34 @@
  * Replaces LoginScreen.vue. CTA triggers Google OAuth via useAuth.login().
  */
 
+import { ref, onMounted } from 'vue'
 import { useAuth } from '../composables/useAuth'
+import { detectInAppBrowser, chromeIntentUrl, type InAppBrowser } from '../lib/in-app-browser'
 
 const { login, error } = useAuth()
+
+// Google refuses its sign-in inside apps' built-in browsers (LinkedIn, Facebook,
+// Instagram…): say so and show how to open the page in a real browser (T-0515).
+// Detected after mount only: this page is also rendered at build time.
+const inApp = ref<InAppBrowser | null>(null)
+const androidChromeUrl = ref<string | null>(null)
+const linkCopied = ref(false)
+
+onMounted(() => {
+  const nav = window.navigator as Navigator & { standalone?: boolean }
+  inApp.value = detectInAppBrowser(nav.userAgent, nav.standalone === true)
+  if (inApp.value) androidChromeUrl.value = chromeIntentUrl(window.location.href, inApp.value.platform)
+})
+
+async function copyLink() {
+  try {
+    await navigator.clipboard.writeText(window.location.href)
+    linkCopied.value = true
+  } catch {
+    // Clipboard blocked in this webview: show the address so it can be copied by hand
+    window.prompt('Copy this link and open it in your browser:', window.location.href)
+  }
+}
 
 const currentYear = new Date().getFullYear()
 
@@ -134,6 +159,25 @@ const plans = [
           aria-live="assertive"
         >
           {{ error }}
+        </div>
+
+        <!-- Inside an app's built-in browser Google refuses the sign-in (T-0515) -->
+        <div
+          v-if="inApp"
+          class="mx-auto mb-6 max-w-sm rounded-lg border border-border bg-surface-card px-4 py-3 text-left text-sm leading-relaxed text-text-secondary"
+          role="note"
+          data-in-app-notice
+        >
+          <p class="mb-1 font-semibold text-text-primary">Open this page in your browser to sign in</p>
+          <p>Google doesn't allow sign-in inside {{ inApp.appName ? `the ${inApp.appName} app's` : "this app's" }} built-in browser.</p>
+          <p v-if="inApp.platform === 'ios'" class="mt-1">Tap <strong>•••</strong> or the share icon, then <strong>Open in Safari</strong> (or Open in browser).</p>
+          <p v-else class="mt-1">Tap <strong>⋮</strong> (top right), then <strong>Open in browser</strong>.</p>
+          <div class="mt-3 flex flex-wrap gap-3">
+            <a v-if="androidChromeUrl" :href="androidChromeUrl" class="rounded-lg bg-accent px-4 py-2 font-medium text-white">Open in Chrome</a>
+            <button type="button" class="cursor-pointer rounded-lg border border-border px-4 py-2 font-medium text-text-primary" @click="copyLink">
+              {{ linkCopied ? 'Link copied: paste it in your browser' : 'Copy link' }}
+            </button>
+          </div>
         </div>
 
         <!-- Google sign-in CTA -->
