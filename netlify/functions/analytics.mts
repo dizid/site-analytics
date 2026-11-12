@@ -25,6 +25,7 @@ import {
   parseSourcesReport,
   type GA4ReportResponse,
 } from './lib/ga4-report.js'
+import { mapWithConcurrency } from './lib/pool.js'
 
 // GA4 Data API base URL
 const DATA_API_BASE = 'https://analyticsdata.googleapis.com/v1beta/properties'
@@ -32,8 +33,22 @@ const DATA_API_BASE = 'https://analyticsdata.googleapis.com/v1beta/properties'
 // GA4 Admin API for property discovery
 const ADMIN_API_BASE = 'https://analyticsadmin.googleapis.com/v1beta'
 
-// Maximum properties per batch to stay within GA4 rate limits
-const BATCH_SIZE = 3
+// Properties loaded at the same time. GA4's limit of 10 concurrent requests is
+// per property, and these are all different properties. (Was 3 per batch, one
+// batch after another: ~180 properties took about 60 s, Netlify's hard limit
+// for this function, and the dashboard came back empty.)
+const CONCURRENCY = 8
+
+// One Google call may take at most this long (a hung call would otherwise hold
+// the whole response past Netlify's 60 s limit).
+const REQUEST_TIMEOUT_MS = 15_000
+
+// After this much time since the request came in, no new property is started;
+// the rest get a "not loaded" note. 35 s + one 15 s call stays under 60 s.
+const TIME_BUDGET_MS = 35_000
+
+const NOT_LOADED_IN_TIME =
+  "Not loaded: this account has more properties than fit in one load. Refresh the page to try again."
 
 // ---------------------------------------------------------------------------
 // Google API error parsing
@@ -144,6 +159,7 @@ async function fetchWebsiteUrl(
 
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     })
 
     if (!response.ok) return undefined
@@ -185,6 +201,7 @@ async function fetchPropertyReports(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ requests: buildOverviewRequests(days) }),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   })
 
   if (!response.ok) {
@@ -226,7 +243,10 @@ async function fetchProperty(
       error:   null,
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
+    const timedOut = err instanceof Error && err.name === 'TimeoutError'
+    const message = timedOut
+      ? 'Google Analytics took too long for this property. Refresh the page to try again.'
+      : err instanceof Error ? err.message : 'Unknown error'
     return {
       propertyId,
       displayName,
@@ -235,6 +255,11 @@ async function fetchProperty(
       error:   message,
     }
   }
+}
+
+/** Result for a property that wasn't started because the time budget ran out. */
+function notLoadedInTime(propertyId: string, displayName: string): PropertyResult {
+  return { propertyId, displayName, metrics: null, sources: [], error: NOT_LOADED_IN_TIME }
 }
 
 // ---------------------------------------------------------------------------
@@ -256,6 +281,9 @@ export default async (request: Request, _context: Context): Promise<Response> =>
       { status: 405, headers: JSON_HEADERS }
     )
   }
+
+  // Time budget for the whole request (see TIME_BUDGET_MS)
+  const deadline = Date.now() + TIME_BUDGET_MS
 
   // Validate session JWT
   const session = await validateSession(request)
@@ -313,67 +341,38 @@ export default async (request: Request, _context: Context): Promise<Response> =>
       )
     }
 
-    const results: PropertyResult[] = []
+    // Load CONCURRENCY properties at a time. fetchProperty never throws: a
+    // failing property comes back with metrics: null and its error message.
+    const results = await mapWithConcurrency(
+      properties,
+      CONCURRENCY,
+      ({ propertyId, displayName }) => fetchProperty(propertyId, displayName, days, token),
+      { deadline, onSkip: ({ propertyId, displayName }) => notLoadedInTime(propertyId, displayName) }
+    )
 
-    // Fan out across all properties in batches of BATCH_SIZE to respect rate limits
-    for (let i = 0; i < properties.length; i += BATCH_SIZE) {
-      const batch = properties.slice(i, i + BATCH_SIZE)
-
-      const batchResults = await Promise.allSettled(
-        batch.map(({ propertyId, displayName }) =>
-          fetchProperty(propertyId, displayName, days, token)
-        )
-      )
-
-      // allSettled guarantees a result for every property.
-      // fetchProperty catches its own errors and returns a PropertyResult,
-      // so 'rejected' only happens if fetchProperty itself throws unexpectedly.
-      for (const [index, result] of batchResults.entries()) {
-        if (result.status === 'fulfilled') {
-          results.push(result.value)
-        } else {
-          // Defensive fallback — fetchProperty should never reject
-          const { propertyId, displayName } = batch[index] ?? { propertyId: 'unknown', displayName: 'unknown' }
-          results.push({
-            propertyId,
-            displayName,
-            metrics: null,
-            sources: [],
-            error:   result.reason instanceof Error
-              ? result.reason.message
-              : 'Unexpected error',
-          })
-        }
-      }
-    }
-
-    // Retry failed properties once after a short delay (handles transient rate-limit rejections).
-    // Skip permanent errors — permission issues (UNAUTHENTICATED, PERMISSION_DENIED) won't resolve on retry.
+    // Retry failed properties once after a short delay (handles transient rate-limit rejections),
+    // while time is left. Skip permanent errors (UNAUTHENTICATED, PERMISSION_DENIED won't resolve
+    // on retry) and properties skipped for time.
     const permanentErrors = ['UNAUTHENTICATED', 'PERMISSION_DENIED', 'insufficient permissions']
     const failedIndices = results
       .map((r, i) => {
-        if (!r.error) return -1
+        if (!r.error || r.error === NOT_LOADED_IN_TIME) return -1
         if (permanentErrors.some(pe => r.error!.toLowerCase().includes(pe.toLowerCase()))) return -1
         return i
       })
       .filter(i => i !== -1)
 
-    if (failedIndices.length > 0) {
+    if (failedIndices.length > 0 && Date.now() + 1000 < deadline) {
       await new Promise(resolve => setTimeout(resolve, 1000))
 
-      for (let i = 0; i < failedIndices.length; i += BATCH_SIZE) {
-        const retryBatch = failedIndices.slice(i, i + BATCH_SIZE)
-        const retryResults = await Promise.allSettled(
-          retryBatch.map(idx => {
-            const { propertyId, displayName } = properties[idx]
-            return fetchProperty(propertyId, displayName, days, token)
-          })
-        )
-        for (const [j, result] of retryResults.entries()) {
-          if (result.status === 'fulfilled' && result.value.error === null) {
-            results[retryBatch[j]] = result.value
-          }
-        }
+      const retried = await mapWithConcurrency(
+        failedIndices,
+        CONCURRENCY,
+        (idx) => fetchProperty(properties[idx].propertyId, properties[idx].displayName, days, token),
+        { deadline, onSkip: (idx) => results[idx] }
+      )
+      for (const [j, result] of retried.entries()) {
+        if (result.error === null) results[failedIndices[j]] = result
       }
     }
 
