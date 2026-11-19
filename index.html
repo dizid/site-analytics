@@ -50,6 +50,8 @@
       so crawlers without JavaScript can read it. Signed-in visitors (stored session,
       or arriving from Google sign-in with #token=) skip that copy until the app mounts.
       Keep the key in step with STORAGE_KEY in src/composables/useAuth.ts.
+      CSP (T-0634): netlify.toml allows this script by its sha256 hash. Changing even
+      one character (incl. spaces) needs a new hash there: scripts/csp-hash.mjs prints it.
     -->
     <script>
       try {
