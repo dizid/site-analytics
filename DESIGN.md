@@ -29,9 +29,9 @@ Design reference created from Google Stitch export. This document is the impleme
 
 ### Typography
 
-- **Font:** Inter (Google Fonts), weights 400, 500, 600, 700, 800
-- **Import:** `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');`
-- **Body:** `font-family: 'Inter', system-ui, -apple-system, sans-serif;`
+- **Font:** Outfit (variable font, weights 300-800 used), self-hosted since T-0636 (Nov 2026)
+- **Import:** `import '@fontsource-variable/outfit'` in `src/main.ts` (no Google Fonts: it blocked first paint and sent visitor IPs to Google; the CSP allows fonts from 'self' only)
+- **Body:** `font-family: 'Outfit Variable', 'Outfit', system-ui, -apple-system, sans-serif;`
 - **Headings:** `font-bold` to `font-extrabold` depending on hierarchy
 - **Labels:** `text-[10px] font-bold uppercase tracking-wider` for metric labels
 - **Values:** `text-lg font-bold` to `text-2xl font-bold` for metric values

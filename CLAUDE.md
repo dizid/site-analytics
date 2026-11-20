@@ -123,6 +123,8 @@ Unset token/account ID → dashboard is exactly GA4-only, plus a one-line hint f
 - Mobile-first, dark mode default
 - Glass morphism UI pattern (bg-white/5 backdrop-blur-sm border-white/10)
 - Tailwind CSS 4 with `@theme {}` tokens in src/style.css
+- Font: Outfit, self-hosted via `@fontsource-variable/outfit` (imported in `src/main.ts`, T-0636). Don't re-add Google Fonts: the CSP allows fonts from 'self' only
+- Competitor facts (landing comparison table + the comparison blog post): only prices copied from the vendor's own pricing page, with the check date shown; last checked 2026-11-20 (T-0636). No guessed rows (setup times etc.)
 - Composables use module-level singletons (state declared outside the exported function)
 - GA4 endDate is always `"yesterday"` (today's data is partial)
 - JWT signed with HS256, 24h expiry
