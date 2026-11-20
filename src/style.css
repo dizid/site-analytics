@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -24,7 +23,8 @@ body {
   min-height: 100vh;
   background-color: var(--color-surface);
   color: var(--color-text-primary);
-  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  /* 'Outfit Variable' = self-hosted via @fontsource-variable/outfit (imported in main.ts) */
+  font-family: 'Outfit Variable', 'Outfit', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

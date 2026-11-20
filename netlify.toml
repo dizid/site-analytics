@@ -19,7 +19,8 @@
     # script-src: own files + the inline session check in index.html (by hash; run
     # `node scripts/csp-hash.mjs` after changing that script). img-src allows any https
     # image (Google profile pictures). All API calls stay on this domain.
-    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' 'sha256-I0KIaDYhsCw7BDxk0Ah1iYxLkXUOjyDOwr/Hqxb19DI='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri /api/csp-report"
+    # Fonts are self-hosted since T-0636 (Nov 20 2026), so no Google Fonts origins.
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' 'sha256-I0KIaDYhsCw7BDxk0Ah1iYxLkXUOjyDOwr/Hqxb19DI='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri /api/csp-report"
 
 [[redirects]]
   from = "/api/oauth/authorize"
