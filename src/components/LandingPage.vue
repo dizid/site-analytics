@@ -52,12 +52,16 @@ const features = [
   },
 ]
 
-// Comparison table data
+// Comparison table data. Competitor prices = lowest listed plan, billed annually, copied from
+// each vendor's pricing page on 2026-11-20 (agencyanalytics.com/pricing, databox.com/pricing,
+// dashthis.com/pricing). Re-check them before changing this table; keep the date in the
+// footnote below the table in step. (The old "setup time" and "Google sign-in" rows were
+// guesses; Databox does offer Google sign-in, so they were removed in T-0636.)
 const competitors = [
-  { name: 'StatPilot', price: 'Free', setup: '0 min', autoDiscovers: true, googleSignIn: true, highlight: true },
-  { name: 'AgencyAnalytics', price: '$79/mo', setup: '30+ min', autoDiscovers: false, googleSignIn: false, highlight: false },
-  { name: 'Databox', price: '$199/mo', setup: '60+ min', autoDiscovers: false, googleSignIn: false, highlight: false },
-  { name: 'DashThis', price: '$119/mo', setup: '45+ min', autoDiscovers: false, googleSignIn: false, highlight: false },
+  { name: 'StatPilot', price: 'Free (early access)', autoDiscovers: true, highlight: true },
+  { name: 'AgencyAnalytics', price: '$20/client/mo', autoDiscovers: false, highlight: false },
+  { name: 'Databox', price: '$79/mo', autoDiscovers: false, highlight: false },
+  { name: 'DashThis', price: '$44/mo', autoDiscovers: false, highlight: false },
 ]
 
 // Pricing tiers
@@ -297,7 +301,7 @@ const plans = [
             <tbody>
               <!-- Price row -->
               <tr class="border-b border-border">
-                <td class="px-5 py-3.5 text-text-muted">Price (10 sites)</td>
+                <td class="px-5 py-3.5 text-text-muted">Starting price</td>
                 <td
                   v-for="col in competitors"
                   :key="col.name + '-price'"
@@ -307,20 +311,8 @@ const plans = [
                   {{ col.price }}
                 </td>
               </tr>
-              <!-- Setup time row -->
-              <tr class="border-b border-border">
-                <td class="px-5 py-3.5 text-text-muted">Setup time</td>
-                <td
-                  v-for="col in competitors"
-                  :key="col.name + '-setup'"
-                  class="px-5 py-3.5 text-center"
-                  :class="col.highlight ? 'font-semibold text-accent' : 'text-text-secondary'"
-                >
-                  {{ col.setup }}
-                </td>
-              </tr>
               <!-- Auto-discovers row -->
-              <tr class="border-b border-border">
+              <tr>
                 <td class="px-5 py-3.5 text-text-muted">Auto-discovers properties</td>
                 <td
                   v-for="col in competitors"
@@ -339,29 +331,12 @@ const plans = [
                   >No</span>
                 </td>
               </tr>
-              <!-- Google sign-in row -->
-              <tr>
-                <td class="px-5 py-3.5 text-text-muted">Google sign-in</td>
-                <td
-                  v-for="col in competitors"
-                  :key="col.name + '-signin'"
-                  class="px-5 py-3.5 text-center"
-                >
-                  <span
-                    v-if="col.googleSignIn"
-                    class="font-bold text-success"
-                    aria-label="Yes"
-                  >Yes</span>
-                  <span
-                    v-else
-                    class="text-text-muted"
-                    aria-label="No"
-                  >No</span>
-                </td>
-              </tr>
             </tbody>
           </table>
         </div>
+        <p class="mt-3 text-center text-xs text-text-muted">
+          Competitor prices: lowest listed plan, billed annually, from each vendor's pricing page (November 2026).
+        </p>
 
       </div>
     </section>

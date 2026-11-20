@@ -19,7 +19,7 @@
 - [GA4 Property Not Showing? How to Check and Fix Access](https://statpilot.mom/blog/ga4-property-not-showing-access/): account vs property access, GA4 roles, the common reasons a property is missing (wrong Google account, another organization, old Universal Analytics) and how to grant access.
 - [GA4 Roll-Up Properties: How to Combine Properties Without 360](https://statpilot.mom/blog/ga4-roll-up-properties-without-360/): roll-up properties and subproperties are Analytics 360 features; four options without 360 (switching properties, Data Studio, the Data API, a multi-property dashboard).
 - [Multiple GA4 Properties in Looker Studio (Now Data Studio)](https://statpilot.mom/blog/ga4-multiple-properties-looker-studio/): several GA4 properties in one report, blends of up to 5 sources, and GA4 quota errors with Google's numbers.
-- [GA4 Multi-Property Dashboard: Your Options Compared](https://statpilot.mom/blog/ga4-multi-property-dashboard-comparison-2026/): AgencyAnalytics, Databox, DashThis, AnalyticsPortfolio and StatPilot compared.
+- [GA4 Multi-Property Dashboard: Your Options Compared](https://statpilot.mom/blog/ga4-multi-property-dashboard-comparison-2026/): AgencyAnalytics, Databox, DashThis, Looker Studio and StatPilot compared, with prices checked November 2026.
 
 ## About
 - [Privacy Policy](https://statpilot.mom/privacy), [Terms of Service](https://statpilot.mom/terms).
