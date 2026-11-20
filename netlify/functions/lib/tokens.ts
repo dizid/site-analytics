@@ -185,8 +185,16 @@ const EXPIRY_BUFFER_MS = 5 * 60 * 1000
  * Transparently refreshes if the stored token is within 5 minutes of expiry.
  * Updates Netlify Blobs after a refresh so subsequent calls get the new token.
  * Throws if the user has no stored tokens or the refresh token is revoked.
+ *
+ * `rejectedToken`: an access token Google just refused (401) although it had
+ * time left, e.g. the user removed StatPilot's access in their Google Account.
+ * That token is refreshed now instead of being handed out again; a revoked
+ * grant then fails the refresh, which deletes the stored tokens.
  */
-export async function getValidAccessToken(userId: string): Promise<string> {
+export async function getValidAccessToken(
+  userId: string,
+  options: { rejectedToken?: string } = {},
+): Promise<string> {
   const entry = await readUserTokens(userId)
 
   if (!entry) {
@@ -194,9 +202,10 @@ export async function getValidAccessToken(userId: string): Promise<string> {
   }
   const stored = entry.tokens
 
-  // Return early if the stored access token is still fresh
+  // Return early if the stored access token is still fresh (and isn't the one
+  // Google just refused; a newer one from a parallel refresh is fine)
   const isStillValid = stored.accessTokenExpiresAt - EXPIRY_BUFFER_MS > Date.now()
-  if (isStillValid) {
+  if (isStillValid && stored.accessToken !== options.rejectedToken) {
     return stored.accessToken
   }
 

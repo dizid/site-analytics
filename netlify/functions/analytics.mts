@@ -17,7 +17,8 @@ import type {
   ReportResponse,
 } from '../../src/types/analytics.js'
 import { JSON_HEADERS, validateSession } from './lib/auth.js'
-import { getValidAccessToken, TokenRefreshUnavailableError } from './lib/tokens.js'
+import { accessTokenOrResponse } from './lib/google-access.js'
+import { GoogleApiError, googleApiErrorFrom, isTokenRejected, QUOTA_MESSAGE } from './lib/google-error.js'
 import {
   parseDaysParam,
   buildOverviewRequests,
@@ -49,20 +50,6 @@ const TIME_BUDGET_MS = 35_000
 
 const NOT_LOADED_IN_TIME =
   "Not loaded: this account has more properties than fit in one load. Refresh the page to try again."
-
-// ---------------------------------------------------------------------------
-// Google API error parsing
-// ---------------------------------------------------------------------------
-
-/** Extracts a human-readable error message from Google's JSON error response body. */
-function parseGoogleApiError(body: string, status: number): string {
-  try {
-    const err = JSON.parse(body)
-    const message = err.error?.message || err.error?.status
-    if (message) return message
-  } catch { /* body wasn't JSON */ }
-  return `GA4 API request failed (status ${status})`
-}
 
 // ---------------------------------------------------------------------------
 // GA4 Admin API — property discovery
@@ -106,9 +93,9 @@ async function discoverProperties(token: string): Promise<DiscoveredProperty[]> 
     })
 
     if (!response.ok) {
-      const body = await response.text()
-      console.error(`Admin API accountSummaries failed (${response.status}): ${body}`)
-      throw new Error(parseGoogleApiError(body, response.status))
+      const err = await googleApiErrorFrom(response)
+      console.error(`Admin API accountSummaries failed (${err.status}): ${err.message}`)
+      throw err
     }
 
     const data = await response.json() as AdminAccountSummariesResponse
@@ -205,9 +192,9 @@ async function fetchPropertyReports(
   })
 
   if (!response.ok) {
-    const body = await response.text()
-    console.error(`batchRunReports failed for ${id} (${response.status}): ${body}`)
-    throw new Error(parseGoogleApiError(body, response.status))
+    const err = await googleApiErrorFrom(response)
+    console.error(`batchRunReports failed for ${id} (${err.status}): ${err.message}`)
+    throw err
   }
 
   const data = await response.json() as { reports?: GA4ReportResponse[] }
@@ -244,9 +231,12 @@ async function fetchProperty(
     }
   } catch (err) {
     const timedOut = err instanceof Error && err.name === 'TimeoutError'
+    const quotaReached = err instanceof GoogleApiError && err.status === 429
     const message = timedOut
       ? 'Google Analytics took too long for this property. Refresh the page to try again.'
-      : err instanceof Error ? err.message : 'Unknown error'
+      : quotaReached
+        ? QUOTA_MESSAGE
+        : err instanceof Error ? err.message : 'Unknown error'
     return {
       propertyId,
       displayName,
@@ -294,34 +284,36 @@ export default async (request: Request, _context: Context): Promise<Response> =>
   const days     = parseDaysParam(url)
 
   try {
-    // Get the user's Google access token (auto-refreshes if near expiry)
-    // A 401 from getValidAccessToken means the user needs to re-authenticate
-    let token: string
-    try {
-      token = await getValidAccessToken(session.sub)
-    } catch (err) {
-      if (err instanceof TokenRefreshUnavailableError) {
-        console.error('Google token refresh temporarily unavailable:', err.message)
-        return new Response(
-          JSON.stringify({ error: "Couldn't reach your Google connection right now. Please try again in a minute." }),
-          { status: 503, headers: JSON_HEADERS }
-        )
-      }
-      const detail = err instanceof Error ? err.message : 'Unknown error'
-      console.error(`Failed to get valid access token for user ${session.sub}:`, err)
-      return new Response(
-        JSON.stringify({ error: `Session expired — please sign in again (${detail})` }),
-        { status: 401, headers: JSON_HEADERS }
-      )
-    }
+    // Get the user's Google access token (auto-refreshes if near expiry);
+    // no usable token = 503 "try again" or 401 "sign in again"
+    const tokenOrResponse = await accessTokenOrResponse(session.sub)
+    if (tokenOrResponse instanceof Response) return tokenOrResponse
+    let token = tokenOrResponse
 
     // Auto-discover properties the user has access to in Google Analytics
     let properties: DiscoveredProperty[]
     try {
-      properties = await discoverProperties(token)
+      try {
+        properties = await discoverProperties(token)
+      } catch (err) {
+        if (!isTokenRejected(err)) throw err
+        // Google refused a token we thought was valid (e.g. the user removed
+        // StatPilot's access in their Google Account): refresh once and retry.
+        // A revoked grant fails the refresh → tokens deleted → 401 sign in again.
+        const retryToken = await accessTokenOrResponse(session.sub, token)
+        if (retryToken instanceof Response) return retryToken
+        token = retryToken
+        properties = await discoverProperties(token)
+      }
     } catch (err) {
-      const detail = err instanceof Error ? err.message : 'Unknown error'
       console.error('Property discovery failed:', err)
+      if (isTokenRejected(err)) {
+        return new Response(
+          JSON.stringify({ error: 'Google no longer accepts your sign-in. Please sign in again.' }),
+          { status: 401, headers: JSON_HEADERS }
+        )
+      }
+      const detail = err instanceof Error ? err.message : 'Unknown error'
       return new Response(
         JSON.stringify({ error: `Failed to discover GA4 properties: ${detail}` }),
         { status: 502, headers: JSON_HEADERS }

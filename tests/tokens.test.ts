@@ -114,6 +114,28 @@ describe('getValidAccessToken', () => {
     expect(blobs.has('u1')).toBe(true)
   })
 
+  it('refreshes a token Google just refused, even though it had time left', async () => {
+    seed('u1', { refreshToken: 'r1', accessToken: 'refused', accessTokenExpiresAt: Date.now() + 3_000_000 })
+    googleAnswers(200, { access_token: 'new', expires_in: 3600, token_type: 'Bearer' })
+    await expect(getValidAccessToken('u1', { rejectedToken: 'refused' })).resolves.toBe('new')
+    expect((blobs.get('u1') as { accessToken: string }).accessToken).toBe('new')
+  })
+
+  it('deletes the tokens when the refused token belongs to a revoked grant', async () => {
+    seed('u1', { refreshToken: 'r1', accessToken: 'refused', accessTokenExpiresAt: Date.now() + 3_000_000 })
+    googleAnswers(400, { error: 'invalid_grant' })
+    await expect(getValidAccessToken('u1', { rejectedToken: 'refused' })).rejects.toThrow(/re-authentication required/)
+    expect(blobs.has('u1')).toBe(false)
+  })
+
+  it('hands out a newer stored token instead of refreshing again', async () => {
+    seed('u1', { refreshToken: 'r1', accessToken: 'newer', accessTokenExpiresAt: Date.now() + 3_000_000 })
+    const fetchSpy = vi.fn()
+    vi.stubGlobal('fetch', fetchSpy)
+    await expect(getValidAccessToken('u1', { rejectedToken: 'refused' })).resolves.toBe('newer')
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
   it('still returns the fresh token when saving it fails', async () => {
     seed('u1', { ...expired })
     googleAnswers(200, { access_token: 'new', expires_in: 3600, token_type: 'Bearer' })

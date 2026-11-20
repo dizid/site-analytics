@@ -217,14 +217,20 @@ let fetchId = 0
 
 // Cached reports younger than this are shown without a background refetch.
 const CACHE_FRESH_MS = 60 * 60 * 1000
+// A report where some properties failed (often temporary: Google's usage
+// limit, a timeout) stays fresh only this long, so the error doesn't stick
+// for an hour unless the user presses Refresh.
+const CACHE_FRESH_WITH_ERRORS_MS = 5 * 60 * 1000
 
 /**
- * A cached report is fresh when it is under an hour old AND from today —
- * GA4 ranges end "yesterday", so yesterday's cache covers a shifted window.
+ * A cached report is fresh when it is under an hour old (5 minutes if any
+ * property in it failed) AND from today — GA4 ranges end "yesterday", so
+ * yesterday's cache covers a shifted window.
  */
-function isFresh(cachedAt: number): boolean {
+function isFresh(cachedAt: number, hasErrors = false): boolean {
   const age = Date.now() - cachedAt
-  return age < CACHE_FRESH_MS && new Date(cachedAt).toDateString() === new Date().toDateString()
+  const maxAge = hasErrors ? CACHE_FRESH_WITH_ERRORS_MS : CACHE_FRESH_MS
+  return age < maxAge && new Date(cachedAt).toDateString() === new Date().toDateString()
 }
 
 /**
@@ -267,7 +273,8 @@ async function fetchGa4Report(force = false): Promise<void> {
       syncSelectedProperty()
       error.value = null
       isLoading.value = false
-      if (isFresh(cached.cachedAt)) {
+      const hasErrors = cached.data.properties.some((p) => p.error !== null)
+      if (isFresh(cached.cachedAt, hasErrors)) {
         isRefreshing.value = false
         return
       }

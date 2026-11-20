@@ -18,24 +18,11 @@ import type {
   DetailResponse,
 } from '../../src/types/analytics.js'
 import { JSON_HEADERS, validateSession } from './lib/auth.js'
-import { getValidAccessToken, TokenRefreshUnavailableError } from './lib/tokens.js'
+import { accessTokenOrResponse } from './lib/google-access.js'
+import { GoogleApiError, googleApiErrorFrom, isTokenRejected, QUOTA_MESSAGE } from './lib/google-error.js'
 
 // GA4 Data API base URL (uses full property resource name)
 const DATA_API_BASE = 'https://analyticsdata.googleapis.com/v1beta'
-
-// ---------------------------------------------------------------------------
-// Google API error parsing
-// ---------------------------------------------------------------------------
-
-/** Extracts a human-readable error message from Google's JSON error response body. */
-function parseGoogleApiError(body: string, status: number): string {
-  try {
-    const err = JSON.parse(body)
-    const message = err.error?.message || err.error?.status
-    if (message) return message
-  } catch { /* body wasn't JSON */ }
-  return `GA4 API request failed (status ${status})`
-}
 
 // ---------------------------------------------------------------------------
 // Date range helpers
@@ -107,9 +94,9 @@ async function fetchReport(
   })
 
   if (!response.ok) {
-    const text = await response.text()
-    console.error(`Detail report failed for ${propertyId} (${response.status}): ${text}`)
-    throw new Error(parseGoogleApiError(text, response.status))
+    const err = await googleApiErrorFrom(response)
+    console.error(`Detail report failed for ${propertyId} (${err.status}): ${err.message}`)
+    throw err
   }
 
   return response.json()
@@ -177,49 +164,24 @@ export default async (request: Request, _context: Context): Promise<Response> =>
   const dateRange = buildDateRange(days)
 
   try {
-    // Get the user's Google access token (auto-refreshes if near expiry)
-    let token: string
-    try {
-      token = await getValidAccessToken(session.sub)
-    } catch (err) {
-      if (err instanceof TokenRefreshUnavailableError) {
-        console.error('Google token refresh temporarily unavailable:', err.message)
-        return new Response(
-          JSON.stringify({ error: "Couldn't reach your Google connection right now. Please try again in a minute." }),
-          { status: 503, headers: JSON_HEADERS }
-        )
-      }
-      const detail = err instanceof Error ? err.message : 'Unknown error'
-      console.error(`Failed to get valid access token for user ${session.sub}:`, err)
-      return new Response(
-        JSON.stringify({ error: `Session expired — please sign in again (${detail})` }),
-        { status: 401, headers: JSON_HEADERS }
-      )
-    }
+    // Get the user's Google access token (auto-refreshes if near expiry);
+    // no usable token = 503 "try again" or 401 "sign in again"
+    const tokenOrResponse = await accessTokenOrResponse(session.sub)
+    if (tokenOrResponse instanceof Response) return tokenOrResponse
 
-    // Fire 3 parallel GA4 runReport calls
-    const [pagesData, devicesData, countriesData] = await Promise.all([
-      // Report 1 — Top Pages
-      fetchReport(propertyId, dateRange, token, {
-        dimensions: [{ name: 'pagePath' }],
-        metrics: [{ name: 'screenPageViews' }, { name: 'bounceRate' }],
-        orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
-        limit: 10,
-      }),
-      // Report 2 — Device Breakdown
-      fetchReport(propertyId, dateRange, token, {
-        dimensions: [{ name: 'deviceCategory' }],
-        metrics: [{ name: 'sessions' }],
-        orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
-      }),
-      // Report 3 — Top Countries
-      fetchReport(propertyId, dateRange, token, {
-        dimensions: [{ name: 'country' }],
-        metrics: [{ name: 'sessions' }],
-        orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
-        limit: 10,
-      }),
-    ])
+    let reports: [GA4ReportResponse, GA4ReportResponse, GA4ReportResponse]
+    try {
+      reports = await fetchDetailReports(propertyId, dateRange, tokenOrResponse)
+    } catch (err) {
+      if (!isTokenRejected(err)) throw err
+      // Google refused a token we thought was valid (e.g. the user removed
+      // StatPilot's access in their Google Account): refresh once and retry.
+      // A revoked grant fails the refresh → tokens deleted → 401 sign in again.
+      const retryToken = await accessTokenOrResponse(session.sub, tokenOrResponse)
+      if (retryToken instanceof Response) return retryToken
+      reports = await fetchDetailReports(propertyId, dateRange, retryToken)
+    }
+    const [pagesData, devicesData, countriesData] = reports
 
     const result: DetailResponse = {
       generatedAt: new Date().toISOString(),
@@ -238,9 +200,61 @@ export default async (request: Request, _context: Context): Promise<Response> =>
     )
   } catch (err) {
     console.error('Analytics detail endpoint error:', err)
+    return detailErrorResponse(err)
+  }
+}
+
+/**
+ * Error answer for the detail view. Google's own message is shown (it used to
+ * be hidden behind "Failed to fetch property details"), with plain words for
+ * the usage limit (429) and for a sign-in Google no longer accepts (401).
+ */
+function detailErrorResponse(err: unknown): Response {
+  if (err instanceof GoogleApiError) {
+    if (err.status === 401) {
+      return new Response(
+        JSON.stringify({ error: 'Google no longer accepts your sign-in. Please sign in again.' }),
+        { status: 401, headers: JSON_HEADERS }
+      )
+    }
+    const quotaReached = err.status === 429
     return new Response(
-      JSON.stringify({ error: 'Failed to fetch property details' }),
-      { status: 500, headers: JSON_HEADERS }
+      JSON.stringify({ error: quotaReached ? QUOTA_MESSAGE : `Google Analytics: ${err.message}` }),
+      { status: quotaReached ? 429 : 502, headers: JSON_HEADERS }
     )
   }
+  return new Response(
+    JSON.stringify({ error: 'Failed to fetch property details' }),
+    { status: 500, headers: JSON_HEADERS }
+  )
+}
+
+/** The 3 detail reports (top pages, devices, countries), fetched in parallel. */
+function fetchDetailReports(
+  propertyId: string,
+  dateRange: GA4DateRange,
+  token: string
+): Promise<[GA4ReportResponse, GA4ReportResponse, GA4ReportResponse]> {
+  return Promise.all([
+    // Report 1 — Top Pages
+    fetchReport(propertyId, dateRange, token, {
+      dimensions: [{ name: 'pagePath' }],
+      metrics: [{ name: 'screenPageViews' }, { name: 'bounceRate' }],
+      orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
+      limit: 10,
+    }),
+    // Report 2 — Device Breakdown
+    fetchReport(propertyId, dateRange, token, {
+      dimensions: [{ name: 'deviceCategory' }],
+      metrics: [{ name: 'sessions' }],
+      orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
+    }),
+    // Report 3 — Top Countries
+    fetchReport(propertyId, dateRange, token, {
+      dimensions: [{ name: 'country' }],
+      metrics: [{ name: 'sessions' }],
+      orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
+      limit: 10,
+    }),
+  ])
 }

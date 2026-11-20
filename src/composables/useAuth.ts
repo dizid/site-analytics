@@ -17,6 +17,15 @@ import type { UserInfo } from '../types/analytics'
 const STORAGE_KEY = 'ga4:session-jwt'
 /** Set by src/lib/api.ts when the server ends the session, so the landing page can say so */
 export const SESSION_ENDED_KEY = 'ga4:session-ended'
+/**
+ * Set (sessionStorage, this tab only) by login() just before going to Google.
+ * A #token= coming back is only accepted when this tab started a sign-in, so a
+ * link carrying someone else's token can't silently sign a visitor into that
+ * person's dashboard.
+ */
+export const LOGIN_PENDING_KEY = 'ga4:login-pending'
+/** Same as the sign-in state cookie's lifetime (oauth-authorize.mts) */
+const LOGIN_PENDING_MAX_MS = 15 * 60 * 1000
 
 // ---------------------------------------------------------------------------
 // Singleton state — declared outside the function so all callers share it
@@ -42,13 +51,20 @@ function initAuth(): void {
   // 1. OAuth callback: fragment contains the JWT from the server redirect
   if (hash.startsWith('#token=')) {
     const token = hash.slice(7)
-    localStorage.setItem(STORAGE_KEY, token)
     // Clean the token out of the URL bar without adding to browser history
     history.replaceState(null, '', window.location.pathname)
+    if (takeLoginPending()) {
+      localStorage.setItem(STORAGE_KEY, token)
+    } else {
+      // Not a sign-in this tab started (e.g. a shared link with a token in
+      // it): ignore the token. An existing session below stays as it was.
+      error.value = "That sign-in link wasn't started in this browser tab, so it was ignored. Please sign in with Google below."
+    }
   }
 
   // 2. OAuth error: server couldn't authorize the user
   if (hash.startsWith('#error=')) {
+    takeLoginPending() // this sign-in attempt is over
     const errorCode = hash.slice(7)
     error.value =
       errorCode === 'not_authorized'
@@ -100,8 +116,29 @@ function initAuth(): void {
 // ---------------------------------------------------------------------------
 
 function login(): void {
+  // Remember (this tab only) that a sign-in was started here, see LOGIN_PENDING_KEY
+  try {
+    sessionStorage.setItem(LOGIN_PENDING_KEY, String(Date.now()))
+  } catch {
+    // storage blocked: takeLoginPending() lets the token through
+  }
   // Redirect to the Netlify Function that kicks off the Google OAuth flow
   window.location.href = '/api/oauth/authorize'
+}
+
+/**
+ * True when this tab started a sign-in in the last 15 minutes (and clears the
+ * mark, so it works once). When storage is blocked it returns true: the token
+ * can't be saved then anyway, and real sign-ins must not be refused.
+ */
+function takeLoginPending(): boolean {
+  try {
+    const startedAt = Number(sessionStorage.getItem(LOGIN_PENDING_KEY))
+    sessionStorage.removeItem(LOGIN_PENDING_KEY)
+    return startedAt > 0 && Date.now() - startedAt < LOGIN_PENDING_MAX_MS
+  } catch {
+    return true
+  }
 }
 
 async function logout(): Promise<void> {
