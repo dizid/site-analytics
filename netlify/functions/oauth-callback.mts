@@ -14,7 +14,7 @@
 import type { Context } from '@netlify/functions'
 import { exchangeCodeForTokens, storeUserTokens } from './lib/tokens.js'
 import { mintSessionJwt } from './lib/jwt.js'
-import { checkAllowedEmail } from './lib/auth.js'
+import { checkAllowedEmail, isVerifiedEmail } from './lib/auth.js'
 
 // ---------------------------------------------------------------------------
 // Cookie parsing helper
@@ -39,7 +39,7 @@ interface GoogleIdTokenPayload {
   email: string
   name: string
   picture: string
-  email_verified?: boolean
+  email_verified?: boolean | string
 }
 
 /**
@@ -192,6 +192,15 @@ export default async (request: Request, _context: Context): Promise<Response> =>
   if (!sub || !email) {
     console.error('id_token payload missing required fields (sub, email)')
     return htmlRedirect(`${siteUrl}/#error=invalid_user_info`, clearCookie)
+  }
+
+  // ------------------------------------------------------------------
+  // Verified email only: the address decides the allowlist and the
+  // owner-only Cloudflare data, so Google must have verified it
+  // ------------------------------------------------------------------
+  if (!isVerifiedEmail(userInfo.email_verified)) {
+    console.error('OAuth login rejected — Google account email not verified') // no address in logs
+    return htmlRedirect(`${siteUrl}/#error=email_unverified`, clearCookie)
   }
 
   // ------------------------------------------------------------------

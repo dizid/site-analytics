@@ -61,6 +61,21 @@ export async function validateSession(request: Request): Promise<JwtPayload | Re
 }
 
 // ---------------------------------------------------------------------------
+// Verified email (Google id_token)
+// ---------------------------------------------------------------------------
+
+/**
+ * True only when Google says it verified the account's email address
+ * (`email_verified` in the id_token; a boolean, or the string "true" in some
+ * older Google responses). The email decides who passes ALLOWED_EMAILS and who
+ * sees the owner's Cloudflare data (CF_OWNER_EMAIL), so an address Google
+ * hasn't verified must never sign in.
+ */
+export function isVerifiedEmail(emailVerified: unknown): boolean {
+  return emailVerified === true || emailVerified === 'true'
+}
+
+// ---------------------------------------------------------------------------
 // Email allowlist
 // ---------------------------------------------------------------------------
 

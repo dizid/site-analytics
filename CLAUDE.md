@@ -139,7 +139,7 @@ Unset token/account ID → dashboard is exactly GA4-only, plus a one-line hint f
 2. Server sets CSRF state cookie, redirects to Google OAuth
 3. User grants email + analytics.readonly permissions
 4. Google redirects to /api/oauth/callback with authorization code
-5. Server validates state, exchanges code for tokens, checks email allowlist
+5. Server validates state, exchanges code for tokens, refuses an account whose email Google hasn't verified (`email_verified` in the id_token, `#error=email_unverified`; T-0636 Nov 21 2026: the email decides ALLOWED_EMAILS and the owner-only Cloudflare data), checks email allowlist
 6. Stores refresh token in Netlify Blobs, mints 24h JWT
 7. Redirects to /#token=<jwt> (fragment — never sent to server/logs)
 8. Frontend reads hash, stores JWT in localStorage, clears hash

@@ -73,7 +73,9 @@ function initAuth(): void {
           ? 'StatPilot needs permission to see your Google Analytics data. Sign in again and leave the Google Analytics box ticked.'
           : errorCode === 'state_mismatch'
             ? 'The sign-in took too long or was started in another tab. Please try again.'
-            : 'Sign-in was cancelled or failed. Please try again.'
+            : errorCode === 'email_unverified'
+              ? "Your Google account's email address isn't verified yet. Verify it in your Google Account, then sign in again."
+              : 'Sign-in was cancelled or failed. Please try again.'
     history.replaceState(null, '', window.location.pathname)
     isLoading.value = false
     return
