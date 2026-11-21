@@ -6,6 +6,7 @@ author: Marc
 description: "Running 5+ websites and tired of tab-switching in GA4? Here's an honest comparison of the main multi-property dashboard tools, with prices checked in November 2026."
 tags: ["ga4", "analytics", "dashboard", "multi-property", "comparison"]
 slug: "ga4-multi-property-dashboard-comparison-2026"
+related: ["compare-traffic-across-sites-ga4", "ga4-data-api-quotas-multi-site", "ga4-exclude-internal-traffic-check"]
 ---
 
 # GA4 Multi-Property Dashboard: Your Options Compared [2026]

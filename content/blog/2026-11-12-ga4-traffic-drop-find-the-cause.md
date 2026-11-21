@@ -5,6 +5,7 @@ author: "StatPilot"
 description: "A sudden drop in GA4 is either a tracking problem or a real loss of visitors. How to tell which in a few minutes, the common tracking causes, and how to check Google Search."
 tags: ["ga4", "analytics", "traffic drop", "troubleshooting", "search console"]
 slug: "ga4-traffic-drop-find-the-cause"
+related: ["ga4-exclude-internal-traffic-check", "ga4-numbers-differ-thresholds-other-row", "compare-traffic-across-sites-ga4"]
 ---
 
 # GA4 Traffic Dropped? How to Find the Cause

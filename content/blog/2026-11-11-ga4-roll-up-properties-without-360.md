@@ -5,6 +5,7 @@ author: "StatPilot"
 description: "GA4 roll-up properties combine several properties, but only on Analytics 360. How they work, what they need, and your options without 360."
 tags: ["ga4", "analytics", "roll-up property", "multi-property", "analytics 360"]
 slug: "ga4-roll-up-properties-without-360"
+related: ["ga4-cross-domain-vs-separate-properties", "compare-traffic-across-sites-ga4", "ga4-data-retention-settings"]
 ---
 
 # GA4 Roll-Up Properties: How to Combine Properties Without 360

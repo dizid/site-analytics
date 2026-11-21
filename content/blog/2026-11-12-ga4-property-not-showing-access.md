@@ -5,6 +5,7 @@ author: "StatPilot"
 description: "A GA4 property missing from your property picker or dashboard is usually an access issue. How GA4 roles work, the common causes, and how to fix each one."
 tags: ["ga4", "analytics", "access management", "user roles", "troubleshooting"]
 slug: "ga4-property-not-showing-access"
+related: ["ga4-property-handover-client", "ga4-traffic-drop-find-the-cause", "ga4-cross-domain-vs-separate-properties"]
 ---
 
 # GA4 Property Not Showing? How to Check and Fix Access

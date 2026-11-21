@@ -5,6 +5,7 @@ author: "StatPilot"
 description: "Several sites in GA4: cross-domain measurement, one property per site, or several streams in one property. What each does to users, referrals and access."
 tags: ["ga4", "analytics", "cross-domain", "data streams", "multi-property"]
 slug: "ga4-cross-domain-vs-separate-properties"
+related: ["ga4-exclude-internal-traffic-check", "ga4-property-handover-client", "ga4-traffic-drop-find-the-cause"]
 ---
 
 # GA4 Cross-Domain Measurement vs Separate Properties for Several Sites

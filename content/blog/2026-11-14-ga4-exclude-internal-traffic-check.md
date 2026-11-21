@@ -5,6 +5,7 @@ author: "StatPilot"
 description: "How to exclude internal traffic in GA4: define the IP rule, create the data filter, test it first, and repeat it on every property you run."
 tags: ["ga4", "analytics", "internal traffic", "data filters", "multi-property"]
 slug: "ga4-exclude-internal-traffic-check"
+related: ["ga4-traffic-drop-find-the-cause", "compare-traffic-across-sites-ga4", "ga4-property-handover-client"]
 ---
 
 # Exclude Internal Traffic in GA4 and Check It Works

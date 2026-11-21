@@ -5,6 +5,7 @@ author: "StatPilot"
 description: "GA4 data retention: 2 or 14 months on standard properties, what it does and doesn't affect, reset on new activity, and how to check it on many properties."
 tags: ["ga4", "analytics", "data retention", "admin api", "multi-property"]
 slug: "ga4-data-retention-settings"
+related: ["ga4-property-handover-client", "ga4-roll-up-properties-without-360", "ga4-exclude-internal-traffic-check"]
 ---
 
 # GA4 Data Retention Settings: 2 vs 14 Months and What They Affect

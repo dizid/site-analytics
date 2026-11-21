@@ -70,8 +70,62 @@ function articleJsonLd(meta, canonical) {
   }).replace(/</g, '\\u003c');
 }
 
+// Escape text for use inside HTML (titles and descriptions in the related list)
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Number of related guides shown under each post
+const RELATED_COUNT = 3;
+
+/**
+ * Picks the related guides for one post.
+ * Uses the hand-picked `related: ["slug", ...]` frontmatter list; a slug that doesn't
+ * exist (typo, renamed post) or points at the post itself fails the build, so a broken
+ * internal link can never go live. Posts without the list get the newest other posts.
+ */
+function relatedPostsFor(post, posts) {
+  const bySlug = new Map(posts.map(p => [p.meta.slug, p]));
+  const picked = post.meta.related;
+
+  if (!picked) {
+    return posts.filter(p => p !== post).slice(0, RELATED_COUNT);
+  }
+
+  const slugs = Array.isArray(picked) ? picked : [picked];
+  return slugs.map(slug => {
+    if (slug === post.meta.slug) {
+      throw new Error(`${post.meta.slug}: lists itself under related`);
+    }
+    const target = bySlug.get(slug);
+    if (!target) {
+      throw new Error(`${post.meta.slug}: related post "${slug}" does not exist`);
+    }
+    return target;
+  });
+}
+
+// "Related guides" list at the end of a post; reuses the article's h2/ul/li/a styles
+function relatedTemplate(relatedPosts) {
+  if (relatedPosts.length === 0) return '';
+  const items = relatedPosts.map(p =>
+    `<li><a href="/blog/${p.meta.slug}/">${escapeHtml(p.meta.title)}</a></li>`
+  ).join('\n        ');
+  return `
+    <nav class="article" aria-label="Related guides">
+      <h2>Related guides</h2>
+      <ul>
+        ${items}
+      </ul>
+    </nav>`;
+}
+
 // HTML template for a single blog post (matches privacy.html design)
-function postTemplate(meta, htmlContent) {
+function postTemplate(meta, htmlContent, relatedHtml = '') {
   const title = `${meta.title} — StatPilot`;
   const description = meta.description || '';
   const canonical = `${SITE_URL}/blog/${meta.slug}/`;
@@ -344,6 +398,7 @@ function postTemplate(meta, htmlContent) {
     <div class="article">
       ${htmlContent}
     </div>
+${relatedHtml}
 
     <div class="footer">
       <span>&copy; 2026 Dizid Web Development. All rights reserved.</span>
@@ -359,6 +414,28 @@ function postTemplate(meta, htmlContent) {
   </div>
 </body>
 </html>`;
+}
+
+const INDEX_DESCRIPTION = 'Articles about GA4 analytics, multi-property dashboards, and building better analytics workflows.';
+
+// Blog JSON-LD for the index page, listing every post. '<' escaped like articleJsonLd.
+function blogJsonLd(posts) {
+  return JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    name: 'StatPilot Blog',
+    description: INDEX_DESCRIPTION,
+    url: `${SITE_URL}/blog/`,
+    inLanguage: 'en',
+    publisher: { '@type': 'Organization', name: 'StatPilot', url: SITE_URL },
+    blogPost: posts.map(p => ({
+      '@type': 'BlogPosting',
+      headline: p.meta.title,
+      url: `${SITE_URL}/blog/${p.meta.slug}/`,
+      datePublished: p.meta.date,
+      dateModified: p.meta.updated || p.meta.date
+    }))
+  }).replace(/</g, '\\u003c');
 }
 
 // HTML template for the blog index page
@@ -377,8 +454,24 @@ function indexTemplate(posts) {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Blog — StatPilot</title>
-  <meta name="description" content="Articles about GA4 analytics, multi-property dashboards, and building better analytics workflows." />
+  <meta name="description" content="${INDEX_DESCRIPTION}" />
   <link rel="canonical" href="${SITE_URL}/blog/" />
+
+  <!-- Open Graph / Twitter: share previews for the blog index (had none) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Blog — StatPilot" />
+  <meta property="og:description" content="${INDEX_DESCRIPTION}" />
+  <meta property="og:url" content="${SITE_URL}/blog/" />
+  <meta property="og:site_name" content="StatPilot" />
+  <meta property="og:image" content="${SITE_URL}/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Blog — StatPilot" />
+  <meta name="twitter:description" content="${INDEX_DESCRIPTION}" />
+  <meta name="twitter:image" content="${SITE_URL}/og-image.png" />
+
+  <!-- Structured data: the blog and its posts -->
+  <script type="application/ld+json">${blogJsonLd(posts)}</script>
+
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -601,7 +694,8 @@ async function main() {
   for (const post of posts) {
     const dir = join(OUTPUT_DIR, post.meta.slug);
     await mkdir(dir, { recursive: true });
-    await writeFile(join(dir, 'index.html'), postTemplate(post.meta, post.htmlContent));
+    const relatedHtml = relatedTemplate(relatedPostsFor(post, posts));
+    await writeFile(join(dir, 'index.html'), postTemplate(post.meta, post.htmlContent, relatedHtml));
     console.log(`  Blog: ${post.meta.slug}/index.html`);
   }
 

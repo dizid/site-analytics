@@ -5,6 +5,7 @@ author: "StatPilot"
 description: "GA4 Data API quotas explained: tokens per property per day and hour, the 14,000 per-project limit, RESOURCE_EXHAUSTED errors, and how to stay inside."
 tags: ["ga4", "data-api", "quotas", "multi-property", "developers"]
 slug: "ga4-data-api-quotas-multi-site"
+related: ["ga4-numbers-differ-thresholds-other-row", "ga4-multi-property-dashboard-comparison-2026", "ga4-data-retention-settings"]
 ---
 
 # GA4 Data API Quotas: Tokens and Limits for Multi-Site Dashboards

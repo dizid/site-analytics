@@ -5,6 +5,7 @@ author: "StatPilot"
 description: "Who should own a client's GA4 property, and how to hand it over: move the property, share access, or make the client an Administrator. What moves along, what blocks a move, and how to step back."
 tags: ["ga4", "analytics", "agencies", "access management", "client handover"]
 slug: "ga4-property-handover-client"
+related: ["ga4-data-retention-settings", "ga4-exclude-internal-traffic-check", "ga4-multi-property-dashboard-comparison-2026"]
 ---
 
 # Handing a GA4 Property to a Client (or Taking One Over)

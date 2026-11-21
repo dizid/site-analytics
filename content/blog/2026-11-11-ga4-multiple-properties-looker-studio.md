@@ -5,6 +5,7 @@ author: "StatPilot"
 description: "How to put several GA4 properties in one Looker Studio report: data sources, blends, a site label, date controls, and how to avoid GA4 quota errors."
 tags: ["ga4", "looker-studio", "data-studio", "multi-property", "quotas"]
 slug: "ga4-multiple-properties-looker-studio"
+related: ["ga4-data-api-quotas-multi-site", "ga4-numbers-differ-thresholds-other-row", "compare-traffic-across-sites-ga4"]
 ---
 
 # Multiple GA4 Properties in Looker Studio (Now Data Studio)

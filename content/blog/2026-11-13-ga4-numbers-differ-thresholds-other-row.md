@@ -5,6 +5,7 @@ author: "StatPilot"
 description: "Why GA4 shows different numbers in reports, explorations, the Data API and Data Studio: thresholds, the (other) row, sampling, freshness and time zones."
 tags: ["ga4", "data-api", "data quality", "sampling", "troubleshooting"]
 slug: "ga4-numbers-differ-thresholds-other-row"
+related: ["ga4-traffic-drop-find-the-cause", "ga4-data-retention-settings", "ga4-exclude-internal-traffic-check"]
 ---
 
 # GA4 Numbers Don't Match? Thresholds, (other) Row and Sampling

@@ -5,6 +5,7 @@ author: "StatPilot"
 description: "How to compare traffic across several sites in GA4: users vs sessions, engagement rate vs bounce rate, key events, and the settings that skew comparisons."
 tags: ["ga4", "analytics", "metrics", "engagement rate", "multi-property"]
 slug: "compare-traffic-across-sites-ga4"
+related: ["ga4-traffic-drop-find-the-cause", "ga4-exclude-internal-traffic-check", "ga4-cross-domain-vs-separate-properties"]
 ---
 
 # Comparing Traffic Across Sites in GA4: Which Metrics to Use
