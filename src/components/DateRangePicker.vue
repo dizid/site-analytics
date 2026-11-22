@@ -30,13 +30,15 @@ function select(range: DateRange): void {
 </script>
 
 <template>
+  <!-- px-3 on the pills: next to the 'Updated …' line the bar is only as wide as its content,
+       so without side padding each pill was as narrow as its text (7d was 16 px; T-0636) -->
   <div class="flex gap-1 bg-surface-card/60 border border-border p-1 rounded-xl" role="group" aria-label="Date range">
     <button
       v-for="option in options"
       :key="option.value"
       type="button"
       :class="[
-        'flex-1 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer',
+        'flex-1 px-3 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer',
         modelValue === option.value
           ? 'bg-accent text-white shadow-sm'
           : 'text-text-muted hover:text-text-secondary',

@@ -158,6 +158,8 @@
       align-items: center;
     }
     .footer a { color: #6366f1; }
+    /* 24 px tap height (WCAG 2.5.8) without moving the line: padding + equal negative margin (T-0636) */
+    .footer a { display: inline-block; padding: 4px 0; margin: -4px 0; }
 
     @media (max-width: 480px) {
       .container { padding: 2rem 1rem 4rem; }
@@ -175,6 +177,8 @@
       Back to StatPilot
     </a>
 
+    <!-- main landmark (T-0636): screen readers can jump straight to the content -->
+    <main>
     <div class="header">
       <span class="brand"><span class="brand-dot"></span>StatPilot</span>
       <h1>Terms of Service</h1>
@@ -291,6 +295,8 @@
       <li>Email: <a href="mailto:hello@dizid.com">hello@dizid.com</a></li>
       <li>Web: <a href="https://dizid.com" target="_blank" rel="noopener noreferrer">dizid.com</a></li>
     </ul>
+
+    </main>
 
     <div class="footer">
       <span>&copy; 2026 Dizid Web Development. All rights reserved.</span>

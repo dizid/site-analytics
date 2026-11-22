@@ -23,7 +23,7 @@ defineProps<{
     <div class="bg-surface-card p-3 rounded-lg border border-border border-l-2 border-l-orange-400">
       <p class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1">Total Sessions</p>
       <div class="flex items-baseline gap-2">
-        <h3 class="text-xl font-bold tabular-nums">{{ formatNumber(totals.sessions) }}</h3>
+        <p class="text-xl font-bold tabular-nums">{{ formatNumber(totals.sessions) }}</p>
         <DeltaBadge :current="totals.sessions" :previous="previous?.sessions" />
       </div>
     </div>
@@ -32,7 +32,7 @@ defineProps<{
     <div class="bg-surface-card p-3 rounded-lg border border-border border-l-2 border-l-orange-400">
       <p class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1">Total Pageviews</p>
       <div class="flex items-baseline gap-2">
-        <h3 class="text-xl font-bold tabular-nums">{{ formatNumber(totals.screenPageViews) }}</h3>
+        <p class="text-xl font-bold tabular-nums">{{ formatNumber(totals.screenPageViews) }}</p>
         <DeltaBadge :current="totals.screenPageViews" :previous="previous?.screenPageViews" />
       </div>
     </div>

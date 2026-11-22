@@ -82,8 +82,10 @@ function getDevicePercentage(sessions: number): number {
     <div class="bg-surface-card border border-border rounded-2xl p-5">
       <div class="flex items-center gap-3">
         <!-- Back button -->
+        <!-- p-0.5 -m-0.5: 24 px tap area around the 20 px icon, same position (T-0636) -->
         <button
-          class="text-text-muted hover:text-text-primary transition-colors flex-shrink-0"
+          type="button"
+          class="text-text-muted hover:text-text-primary transition-colors flex-shrink-0 p-0.5 -m-0.5 cursor-pointer"
           aria-label="Back to dashboard"
           @click="emit('back')"
         >
@@ -93,19 +95,22 @@ function getDevicePercentage(sessions: number): number {
         </button>
 
         <div class="min-w-0 flex items-center gap-2">
-          <a
-            v-if="property.websiteUrl"
-            :href="property.websiteUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="min-w-0 text-lg font-semibold text-text-primary hover:text-text-primary transition-colors truncate flex items-center gap-1.5 group"
-          >
-            {{ property.displayName }}
-            <svg class="w-3.5 h-3.5 text-text-muted group-hover:text-text-secondary flex-shrink-0 transition-colors" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M6 3.5h-2.5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-              <path d="M10 2.5h3.5v3.5M14 2l-5.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </a>
+          <!-- The name is the page's h2 in both cases (with a website it used to be a bare link,
+               so the outline jumped from h1 straight to the h3 sections; T-0636) -->
+          <h2 v-if="property.websiteUrl" class="min-w-0 flex">
+            <a
+              :href="property.websiteUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="min-w-0 text-lg font-semibold text-text-primary hover:text-text-primary transition-colors truncate flex items-center gap-1.5 group"
+            >
+              {{ property.displayName }}
+              <svg class="w-3.5 h-3.5 text-text-muted group-hover:text-text-secondary flex-shrink-0 transition-colors" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M6 3.5h-2.5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                <path d="M10 2.5h3.5v3.5M14 2l-5.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </a>
+          </h2>
           <h2
             v-else
             class="min-w-0 text-lg font-semibold text-text-primary truncate"

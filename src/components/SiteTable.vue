@@ -31,12 +31,14 @@ function getTrendData(property: PropertyResult): number[] {
 </script>
 
 <template>
+  <!-- Rows: keyboard focus on the name button shows as an inset ring on the whole row (T-0636) -->
   <div class="bg-surface-card rounded-xl border border-border overflow-hidden">
     <div
       v-for="property in properties"
       :key="property.propertyId"
       :class="[
         'flex items-center justify-between py-3 px-4 border-b border-border last:border-b-0 transition-colors',
+        'has-[button:focus-visible]:ring-2 has-[button:focus-visible]:ring-inset has-[button:focus-visible]:ring-accent',
         property.metrics
           ? 'hover:bg-white/[0.02] cursor-pointer'
           : 'opacity-60',
@@ -51,7 +53,17 @@ function getTrendData(property: PropertyResult): number[] {
         </div>
         <div class="min-w-0">
           <div class="flex items-center gap-1.5 min-w-0">
-            <h3 class="text-sm font-semibold truncate">{{ property.displayName }}</h3>
+            <!-- h2 like the card view (the page h1 is "Properties"). The row is the click target
+                 for mouse/touch; the button makes it reachable by keyboard (T-0636), its click
+                 bubbles to the row's handler. -->
+            <h2 class="text-sm font-semibold truncate">
+              <button
+                v-if="property.metrics"
+                type="button"
+                class="block max-w-full truncate text-left cursor-pointer focus-visible:outline-none"
+              >{{ property.displayName }}</button>
+              <template v-else>{{ property.displayName }}</template>
+            </h2>
             <SourceBadge v-if="showSource" :source="property.source" />
           </div>
           <p class="text-[10px] text-text-muted uppercase tracking-wider truncate">

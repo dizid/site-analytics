@@ -112,6 +112,8 @@ const plans = [
 <template>
   <div class="min-h-screen bg-surface text-text-primary antialiased">
 
+    <!-- main landmark around the page content, footer stays outside (T-0636) -->
+    <main>
     <!-- =====================================================================
          HERO SECTION
          ===================================================================== -->
@@ -434,6 +436,8 @@ const plans = [
       </div>
     </section>
 
+    </main>
+
     <!-- =====================================================================
          FOOTER
          ===================================================================== -->
@@ -444,16 +448,17 @@ const plans = [
           &copy; {{ currentYear }} StatPilot. All rights reserved.
         </p>
 
+        <!-- py-1 -my-1 on the links: 24 px tap height, footer stays the same height (T-0636) -->
         <nav class="flex gap-5" aria-label="Footer navigation">
           <a
             href="/privacy"
-            class="text-xs text-text-muted transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent rounded"
+            class="py-1 -my-1 text-xs text-text-muted transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent rounded"
           >
             Privacy
           </a>
           <a
             href="/terms"
-            class="text-xs text-text-muted transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent rounded"
+            class="py-1 -my-1 text-xs text-text-muted transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent rounded"
           >
             Terms
           </a>
@@ -461,7 +466,7 @@ const plans = [
             href="https://dizid.com"
             target="_blank"
             rel="noopener noreferrer"
-            class="text-xs text-text-muted transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent rounded"
+            class="py-1 -my-1 text-xs text-text-muted transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent rounded"
           >
             Built by Dizid
           </a>

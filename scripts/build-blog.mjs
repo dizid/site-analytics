@@ -208,7 +208,10 @@ function postTemplate(meta, htmlContent, relatedHtml = '') {
       font-size: 0.875rem;
       font-weight: 600;
       color: #6366f1;
-      margin-bottom: 1rem;
+      /* 24 px tap height: 4px padding cancelled by the margins (was margin-bottom: 1rem; T-0636) */
+      padding: 4px 0;
+      margin-top: -4px;
+      margin-bottom: calc(1rem - 4px);
       text-decoration: none;
     }
     .brand-dot {
@@ -319,6 +322,10 @@ function postTemplate(meta, htmlContent, relatedHtml = '') {
     .article tr:last-child td { border-bottom: none; }
 
     /* Code */
+    /* Long API names (properties.updateDataRetentionSettings) and URLs in running text made
+       the retention post 2 px wider than a 320 px phone, so the page could scroll sideways;
+       break such words only when they don't fit (T-0636) */
+    .article { overflow-wrap: break-word; }
     .article code {
       background: rgba(255, 255, 255, 0.06);
       padding: 0.1em 0.35em;
@@ -364,6 +371,8 @@ function postTemplate(meta, htmlContent, relatedHtml = '') {
       align-items: center;
     }
     .footer a { color: #6366f1; }
+    /* 24 px tap height (WCAG 2.5.8) without moving the line: padding + equal negative margin (T-0636) */
+    .footer a { display: inline-block; padding: 4px 0; margin: -4px 0; }
 
     /* Responsive table scroll */
     .table-wrap {
@@ -382,13 +391,15 @@ function postTemplate(meta, htmlContent, relatedHtml = '') {
 <body>
   <div class="container">
 
-    <a href="/blog" class="back-link">
+    <a href="/blog/" class="back-link">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       All posts
     </a>
 
+    <!-- main landmark (T-0636): screen readers can jump straight to the content -->
+    <main>
     <div class="header">
       <a href="/" class="brand"><span class="brand-dot"></span>StatPilot</a>
       <h1>${meta.title}</h1>
@@ -400,12 +411,14 @@ function postTemplate(meta, htmlContent, relatedHtml = '') {
     </div>
 ${relatedHtml}
 
+    </main>
+
     <div class="footer">
       <span>&copy; 2026 Dizid Web Development. All rights reserved.</span>
       <span>
         <a href="/">StatPilot</a>
         &nbsp;&middot;&nbsp;
-        <a href="/blog">Blog</a>
+        <a href="/blog/">Blog</a>
         &nbsp;&middot;&nbsp;
         <a href="/privacy">Privacy</a>
       </span>
@@ -520,7 +533,10 @@ function indexTemplate(posts) {
       font-size: 0.875rem;
       font-weight: 600;
       color: #6366f1;
-      margin-bottom: 1rem;
+      /* 24 px tap height: 4px padding cancelled by the margins (was margin-bottom: 1rem; T-0636) */
+      padding: 4px 0;
+      margin-top: -4px;
+      margin-bottom: calc(1rem - 4px);
       text-decoration: none;
     }
     .brand-dot {
@@ -605,6 +621,8 @@ function indexTemplate(posts) {
     }
     .footer a { color: #6366f1; text-decoration: none; }
     .footer a:hover { text-decoration: underline; }
+    /* 24 px tap height (WCAG 2.5.8) without moving the line: padding + equal negative margin (T-0636) */
+    .footer a { display: inline-block; padding: 4px 0; margin: -4px 0; }
 
     @media (max-width: 480px) {
       .container { padding: 2rem 1rem 4rem; }
@@ -623,6 +641,8 @@ function indexTemplate(posts) {
       Back to StatPilot
     </a>
 
+    <!-- main landmark (T-0636): screen readers can jump straight to the content -->
+    <main>
     <div class="header">
       <a href="/" class="brand"><span class="brand-dot"></span>StatPilot</a>
       <h1>Blog</h1>
@@ -632,6 +652,8 @@ function indexTemplate(posts) {
     <div class="cards">
 ${postCards}
     </div>
+
+    </main>
 
     <div class="footer">
       <span>&copy; 2026 Dizid Web Development. All rights reserved.</span>
@@ -647,6 +669,21 @@ ${postCards}
   </div>
 </body>
 </html>`;
+}
+
+// Long code names and URLs (properties.updateDataRetentionSettings, API paths) have no spaces,
+// so on a 320 px phone they either stuck out (the page scrolled sideways) or, with
+// overflow-wrap alone, broke at a random letter. <wbr> after each '.', '/' and '_' gives the
+// browser a clean place to break; it adds no character when the text is copied (T-0636).
+// Only words of 20+ characters, and only between letters/digits (so `_gl` or `page_view` stay whole).
+const addBreaks = (text) =>
+  text.replace(/\S{20,}/g, (word) => word.replace(/([A-Za-z0-9][./_])(?=[A-Za-z0-9{])/g, '$1<wbr>'));
+function softBreaks(html) {
+  return html
+    // inline code only: code blocks sit in <pre>, which scrolls sideways on its own
+    .replace(/(?<!<pre>)<code>([^<]+)<\/code>/g, (_, text) => `<code>${addBreaks(text)}</code>`)
+    // link text that is one long token (a URL or an API name)
+    .replace(/(<a [^>]*>)([^<\s]{20,})<\/a>/g, (_, open, text) => `${open}${addBreaks(text)}</a>`);
 }
 
 // Wrap tables in a scrollable container for mobile
@@ -682,7 +719,7 @@ async function main() {
 
     // Strip the first H1 from content (we render it in the header)
     const contentWithoutH1 = content.trim().replace(/^#\s+.*\n+/, '');
-    const htmlContent = wrapTables(await marked.parse(contentWithoutH1));
+    const htmlContent = softBreaks(wrapTables(await marked.parse(contentWithoutH1)));
 
     posts.push({ meta, htmlContent, wordCount: content.split(/\s+/).length });
   }

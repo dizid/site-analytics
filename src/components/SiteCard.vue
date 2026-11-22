@@ -73,13 +73,18 @@ const hasError = computed(() => Boolean(props.property.error))
 </script>
 
 <template>
-  <!-- Solid dark card with colored top accent -->
+  <!-- Solid dark card with colored top accent. The whole card is the click target for mouse
+       and touch; keyboard users reach it through the button around the name (its click
+       bubbles up to this handler), and the ring shows on the card while that button has
+       keyboard focus (T-0636: the card was a plain div, so Tab could never open a property).
+       The hover lift is motion-safe only (reduced-motion visitors get no movement). -->
   <div
     :class="[
       'bg-surface-card p-4 rounded-2xl shadow-sm border border-border border-t-2 transition-all duration-200',
+      'has-[button:focus-visible]:ring-2 has-[button:focus-visible]:ring-accent',
       hasError
         ? 'opacity-60'
-        : 'hover:bg-surface-card-hover hover:border-border-hover hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
+        : 'hover:bg-surface-card-hover hover:border-border-hover motion-safe:hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
     ]"
     :style="{ borderTopColor: iconStyle.color }"
     @click="property.metrics && emit('select', property)"
@@ -98,7 +103,15 @@ const hasError = computed(() => Boolean(props.property.error))
         </div>
         <div class="min-w-0">
           <div class="flex items-center gap-1.5 min-w-0">
-            <h2 class="font-bold text-sm leading-tight truncate">{{ property.displayName }}</h2>
+            <h2 class="font-bold text-sm leading-tight truncate">
+              <!-- No own @click: Enter/Space fire a click that bubbles to the card -->
+              <button
+                v-if="property.metrics"
+                type="button"
+                class="block max-w-full truncate text-left cursor-pointer focus-visible:outline-none"
+              >{{ property.displayName }}</button>
+              <template v-else>{{ property.displayName }}</template>
+            </h2>
             <SourceBadge v-if="showSource" :source="property.source" />
           </div>
           <p class="text-[11px] text-text-muted uppercase font-bold tracking-wider truncate">
