@@ -143,7 +143,9 @@ watch(isAuthenticated, (auth) => {
           role="status"
           class="rounded-2xl border border-border bg-surface-card p-6 text-sm"
         >
-          <p class="font-semibold text-text-primary mb-2">
+          <!-- wrap-break-word: a long Google email has no break points and made this
+               screen wider than a 320 px phone -->
+          <p class="font-semibold text-text-primary mb-2 wrap-break-word">
             No Google Analytics 4 properties found for {{ user?.email || 'this Google account' }}.
           </p>
           <p class="text-text-secondary mb-4">

@@ -15,11 +15,14 @@ defineProps<{
 </script>
 
 <template>
+  <!-- Value rows use flex-wrap + gap-x-2: on a 320 px phone a big total ("1,234,567")
+       plus its "+11%" badge is wider than the tile, so the badge drops to its own line
+       instead of poking out of the tile. When it fits (all wider screens) nothing moves. -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
     <!-- Total Sessions -->
     <div class="bg-surface-card p-3 rounded-lg border border-border border-l-2 border-l-accent">
       <p class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1">Total Sessions</p>
-      <div v-if="!isLoading" class="flex items-baseline gap-2">
+      <div v-if="!isLoading" class="flex flex-wrap items-baseline gap-x-2">
         <p class="text-xl font-bold tabular-nums">{{ formatNumber(totalSessions) }}</p>
         <DeltaBadge :current="totalSessions" :previous="previous?.sessions" />
       </div>
@@ -29,7 +32,7 @@ defineProps<{
     <!-- Total Users -->
     <div class="bg-surface-card p-3 rounded-lg border border-border border-l-2 border-l-cyan-400">
       <p class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1">Total Users</p>
-      <div v-if="!isLoading" class="flex items-baseline gap-2">
+      <div v-if="!isLoading" class="flex flex-wrap items-baseline gap-x-2">
         <p class="text-xl font-bold tabular-nums">{{ formatNumber(totalUsers) }}</p>
         <DeltaBadge :current="totalUsers" :previous="previous?.activeUsers" />
       </div>
@@ -39,7 +42,7 @@ defineProps<{
     <!-- Avg Bounce Rate -->
     <div class="bg-surface-card p-3 rounded-lg border border-border border-l-2 border-l-amber-400">
       <p class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1">Bounce Rate</p>
-      <div v-if="!isLoading" class="flex items-baseline gap-2">
+      <div v-if="!isLoading" class="flex flex-wrap items-baseline gap-x-2">
         <p class="text-xl font-bold tabular-nums">{{ formatBounceRate(avgBounceRate) }}</p>
         <DeltaBadge :current="avgBounceRate" :previous="previous?.bounceRate" mode="points" invert />
       </div>
@@ -49,7 +52,7 @@ defineProps<{
     <!-- Avg Duration -->
     <div class="bg-surface-card p-3 rounded-lg border border-border border-l-2 border-l-emerald-400">
       <p class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1">Avg Session</p>
-      <div v-if="!isLoading" class="flex items-baseline gap-2">
+      <div v-if="!isLoading" class="flex flex-wrap items-baseline gap-x-2">
         <p class="text-xl font-bold tabular-nums">{{ formatDuration(avgDuration) }}</p>
         <DeltaBadge :current="avgDuration" :previous="previous?.averageSessionDuration" />
       </div>

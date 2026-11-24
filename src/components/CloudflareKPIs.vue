@@ -22,7 +22,7 @@ defineProps<{
     <!-- Total Sessions (Cloudflare visits) -->
     <div class="bg-surface-card p-3 rounded-lg border border-border border-l-2 border-l-orange-400">
       <p class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1">Total Sessions</p>
-      <div class="flex items-baseline gap-2">
+      <div class="flex flex-wrap items-baseline gap-x-2">
         <p class="text-xl font-bold tabular-nums">{{ formatNumber(totals.sessions) }}</p>
         <DeltaBadge :current="totals.sessions" :previous="previous?.sessions" />
       </div>
@@ -31,7 +31,7 @@ defineProps<{
     <!-- Total Pageviews -->
     <div class="bg-surface-card p-3 rounded-lg border border-border border-l-2 border-l-orange-400">
       <p class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1">Total Pageviews</p>
-      <div class="flex items-baseline gap-2">
+      <div class="flex flex-wrap items-baseline gap-x-2">
         <p class="text-xl font-bold tabular-nums">{{ formatNumber(totals.screenPageViews) }}</p>
         <DeltaBadge :current="totals.screenPageViews" :previous="previous?.screenPageViews" />
       </div>

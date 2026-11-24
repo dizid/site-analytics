@@ -5,7 +5,7 @@
  * date range picker, refresh button, and user avatar + logout.
  */
 
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import type { ViewMode, DateRange, UserInfo } from '../types/analytics'
 import DateRangePicker from './DateRangePicker.vue'
 import { useDateRange } from '../composables/useDateRange'
@@ -40,6 +40,29 @@ const now = ref(new Date())
 let clockTimer: ReturnType<typeof setInterval>
 onMounted(() => { clockTimer = setInterval(() => { now.value = new Date() }, 30_000) })
 onUnmounted(() => clearInterval(clockTimer))
+
+// ---------------------------------------------------------------------------
+// Keep keyboard focus out from under the sticky header
+// ---------------------------------------------------------------------------
+
+// Shift+Tab scrolls a focused card or button to the top edge of the page, where
+// this sticky bar hid it. scroll-padding-top on <html> = the bar's height (+8px)
+// makes the browser stop below the bar. Measured, because the height depends on
+// the screen width; removed again on sign-out (the landing page has no sticky bar).
+const headerEl = ref<HTMLElement | null>(null)
+let headerObserver: ResizeObserver | null = null
+onMounted(() => {
+  if (!headerEl.value || typeof ResizeObserver === 'undefined') return
+  headerObserver = new ResizeObserver(() => {
+    const height = headerEl.value?.offsetHeight ?? 0
+    document.documentElement.style.scrollPaddingTop = `${height + 8}px`
+  })
+  headerObserver.observe(headerEl.value)
+})
+onUnmounted(() => {
+  headerObserver?.disconnect()
+  document.documentElement.style.removeProperty('scroll-padding-top')
+})
 
 /**
  * Returns a human-readable "last updated" string.
@@ -81,6 +104,8 @@ const avatarFallback = computed<string>(() => {
 
 const avatarError = ref(false)
 const showUserMenu = ref(false)
+const avatarButton = ref<HTMLButtonElement | null>(null)
+const signOutButton = ref<HTMLButtonElement | null>(null)
 
 function onAvatarError(): void {
   avatarError.value = true
@@ -88,6 +113,21 @@ function onAvatarError(): void {
 
 function toggleUserMenu(): void {
   showUserMenu.value = !showUserMenu.value
+  // The menu is teleported to the end of <body>, so Tab from the avatar never
+  // reached "Sign out" (it went to the date pills under the open menu). Move focus in.
+  if (showUserMenu.value) nextTick(() => signOutButton.value?.focus())
+}
+
+/**
+ * Keyboard in the open menu: Escape closes it and puts focus back on the avatar.
+ * Tab / Shift+Tab also close it and continue from the avatar: focus moves there in
+ * this keydown, and the browser's own Tab step then starts from the avatar.
+ */
+function onUserMenuKeydown(event: KeyboardEvent): void {
+  if (event.key !== 'Escape' && event.key !== 'Tab') return
+  if (event.key === 'Escape') event.preventDefault()
+  showUserMenu.value = false
+  avatarButton.value?.focus()
 }
 
 function handleLogout(): void {
@@ -108,7 +148,7 @@ const selectedRange = computed<DateRange>({
 
 <template>
   <!-- Sticky top bar -->
-  <header class="sticky top-0 z-20 bg-surface-elevated border-b border-border shadow-[0_1px_3px_rgba(0,0,0,0.4)] px-5 py-3">
+  <header ref="headerEl" class="sticky top-0 z-20 bg-surface-elevated border-b border-border shadow-[0_1px_3px_rgba(0,0,0,0.4)] px-5 py-3">
     <div class="flex items-center justify-between">
 
       <!-- Left: home icon + title + subtitle -->
@@ -215,9 +255,12 @@ const selectedRange = computed<DateRange>({
         <div class="relative">
           <button
             v-if="user"
+            ref="avatarButton"
             type="button"
             class="w-10 h-10 rounded-full overflow-hidden cursor-pointer ring-2 ring-transparent hover:ring-accent/30 transition-all"
             :title="`Signed in as ${user.email}`"
+            :aria-expanded="showUserMenu"
+            aria-controls="user-menu"
             @click="toggleUserMenu"
           >
             <img
@@ -254,8 +297,10 @@ const selectedRange = computed<DateRange>({
           <Teleport to="body">
             <div v-if="showUserMenu && user" class="fixed inset-0 z-50" @click="showUserMenu = false">
               <div
+                id="user-menu"
                 class="fixed top-14 right-4 w-64 bg-surface-elevated border border-border rounded-xl shadow-xl p-4 z-50"
                 @click.stop
+                @keydown="onUserMenuKeydown"
               >
                 <!-- User info -->
                 <div class="flex items-center gap-3 mb-3 pb-3 border-b border-border">
@@ -273,6 +318,7 @@ const selectedRange = computed<DateRange>({
                 </div>
                 <!-- Sign out -->
                 <button
+                  ref="signOutButton"
                   type="button"
                   class="w-full flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary py-2 px-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
                   @click="handleLogout"
