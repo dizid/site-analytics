@@ -43,6 +43,7 @@ function getTrendData(property: PropertyResult): number[] {
           ? 'hover:bg-white/[0.02] cursor-pointer'
           : 'opacity-60',
       ]"
+      :data-property-id="property.propertyId"
       @click="property.metrics && emit('select', property)"
     >
       <div class="flex items-center gap-3 min-w-0">
