@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch } from 'vue'
+import { nextTick, watch } from 'vue'
 import { useAuth } from './composables/useAuth'
 import { useAnalyticsData } from './composables/useAnalyticsData'
 import LandingPage from './components/LandingPage.vue'
@@ -53,6 +53,31 @@ const {
 watch(isAuthenticated, (auth) => {
   if (auth) fetchReport()
 }, { immediate: true })
+
+// Going back from a property's detail to the list. The detail replaces the list on the
+// same page, so the page used to keep one scroll position for both: back left the user
+// somewhere else in the list, with keyboard focus lost (PropertyDetail now starts at its
+// own top, T-0636). Remember where the list was when a property opened, and on back put
+// the list there again with focus on that property's card/row (no ring after a tap: the
+// browser only shows it after keyboard use). The watcher runs before the DOM swaps, so
+// scrollY is still the list's.
+let listScrollY = 0
+let openedPropertyId: string | null = null
+watch(() => !!selectedProperty.value, async (isOpen) => {
+  if (isOpen) {
+    listScrollY = window.scrollY
+    openedPropertyId = selectedProperty.value?.propertyId ?? null
+    return
+  }
+  await nextTick()
+  if (!isAuthenticated.value) return // signed out from the detail: landing page, leave it alone
+  window.scrollTo(0, listScrollY)
+  if (openedPropertyId) {
+    document
+      .querySelector<HTMLElement>(`[data-property-id="${CSS.escape(openedPropertyId)}"] button`)
+      ?.focus({ preventScroll: true })
+  }
+})
 </script>
 
 <template>
@@ -143,7 +168,9 @@ watch(isAuthenticated, (auth) => {
           role="status"
           class="rounded-2xl border border-border bg-surface-card p-6 text-sm"
         >
-          <p class="font-semibold text-text-primary mb-2">
+          <!-- wrap-break-word: a long Google email has no break points and made this
+               screen wider than a 320 px phone -->
+          <p class="font-semibold text-text-primary mb-2 wrap-break-word">
             No Google Analytics 4 properties found for {{ user?.email || 'this Google account' }}.
           </p>
           <p class="text-text-secondary mb-4">

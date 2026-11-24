@@ -6,7 +6,7 @@
  * (pages, devices, countries; referrers for Cloudflare) fetched on demand.
  */
 
-import { computed, type DeepReadonly } from 'vue'
+import { computed, onMounted, ref, type DeepReadonly } from 'vue'
 import type { PropertyResult, PropertyDetail } from '../types/analytics'
 import StatBadge from './StatBadge.vue'
 import Sparkline from './Sparkline.vue'
@@ -30,6 +30,18 @@ const props = defineProps<{
 const emit = defineEmits<{ back: []; retry: [] }>()
 
 const isCloudflare = computed(() => sourceOf(props.property) === 'cloudflare')
+
+// The detail replaces the list on the same page and used to keep the list's scroll
+// position: a property opened from far down the list showed the middle of its detail,
+// with the name and top numbers above the screen, and keyboard focus was lost (the
+// card's button was gone). Start at the top, focus on the property's name (T-0636).
+// The heading takes focus only from here (tabindex -1, so not a Tab stop) and shows no
+// ring: it isn't something to press.
+const nameHeading = ref<HTMLElement | null>(null)
+onMounted(() => {
+  window.scrollTo(0, 0)
+  nameHeading.value?.focus({ preventScroll: true })
+})
 
 /** Sessions trend values from daily metrics. */
 const trendData = computed<number[]>(() => {
@@ -97,7 +109,7 @@ function getDevicePercentage(sessions: number): number {
         <div class="min-w-0 flex items-center gap-2">
           <!-- The name is the page's h2 in both cases (with a website it used to be a bare link,
                so the outline jumped from h1 straight to the h3 sections; T-0636) -->
-          <h2 v-if="property.websiteUrl" class="min-w-0 flex">
+          <h2 v-if="property.websiteUrl" ref="nameHeading" tabindex="-1" class="min-w-0 flex focus:outline-none">
             <a
               :href="property.websiteUrl"
               target="_blank"
@@ -113,7 +125,9 @@ function getDevicePercentage(sessions: number): number {
           </h2>
           <h2
             v-else
-            class="min-w-0 text-lg font-semibold text-text-primary truncate"
+            ref="nameHeading"
+            tabindex="-1"
+            class="min-w-0 text-lg font-semibold text-text-primary truncate focus:outline-none"
           >
             {{ property.displayName }}
           </h2>

@@ -87,6 +87,7 @@ const hasError = computed(() => Boolean(props.property.error))
         : 'hover:bg-surface-card-hover hover:border-border-hover motion-safe:hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
     ]"
     :style="{ borderTopColor: iconStyle.color }"
+    :data-property-id="property.propertyId"
     @click="property.metrics && emit('select', property)"
   >
     <!-- Top: icon + name + sparkline -->
