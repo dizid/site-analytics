@@ -58,7 +58,7 @@ Two details. In Google's example, a visitor who first came from a domain you lat
 
 ## Reporting
 
-- **Cross-domain:** one set of reports. To split by site, use the [Hostname dimension](https://support.google.com/analytics/answer/9143382), "the subdomain and domain names of a URL that people visited on your website."
+- **Cross-domain:** one set of reports. To split by site, use the [Hostname dimension](https://support.google.com/analytics/table/13948007), "the subdomain and domain names of a URL that people visited on your website."
 - **Separate properties:** clean reports per site, but no combined view in GA4. Roll-up properties need 360; see [GA4 roll-up properties without 360](/blog/ga4-roll-up-properties-without-360/).
 - **Several streams:** one set of reports. Split with the Stream name dimension, "the name of the stream from which users activity originated."
 
@@ -116,7 +116,7 @@ If you choose one property per site, the cost is switching between properties to
 - [Google Analytics account structure](https://support.google.com/analytics/answer/9679158) (Analytics Help)
 - [Google Analytics hierarchy](https://support.google.com/analytics/answer/9303323) (Analytics Help)
 - [About Analytics sessions](https://support.google.com/analytics/answer/9191807) (Analytics Help)
-- [Analytics dimensions and metrics](https://support.google.com/analytics/answer/9143382) (Analytics Help)
+- [Analytics dimensions and metrics](https://support.google.com/analytics/table/13948007) (Analytics Help)
 - [Access and data-restriction management](https://support.google.com/analytics/answer/9305587) (Analytics Help)
 - [About subproperties](https://support.google.com/analytics/answer/11525732) (Analytics Help)
 - [Configuration limits](https://support.google.com/analytics/answer/12229528) (Analytics Help)

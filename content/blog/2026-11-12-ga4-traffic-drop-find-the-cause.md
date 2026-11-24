@@ -84,7 +84,7 @@ How to narrow it down, following that guide:
 1. **Check Google's ranking updates.** The [Google Search Status Dashboard](https://status.search.google.com/products/rGHU1u87FJnkP6W2GwMi/history) lists every confirmed ranking update with its start date. In 2026 it lists core updates starting 27 March, 21 May and 10 November, plus spam updates in March, June, August and September. A drop that starts within those windows may be the update.
 2. **Open Search Console's Performance report** and compare the last 3 months with the period before, or with the same months last year. Google's guide: if both impressions and clicks dropped, look at the common causes; if only clicks dropped, your titles or snippets may be losing to other results.
 3. **Look at the shape.** A large sudden drop goes with an update, a security issue or spam; a curve that repeats every year is seasonality; a slow, broad decline is more often technical or falling interest. Set the date range to the last 16 months to see yearly patterns.
-4. **Check whether interest fell everywhere.** Put your main queries into [Google Trends](https://trends.google.com). If searches fell across the web, it isn't your site.
+4. **Check whether interest fell everywhere.** Put your main queries into [Google Trends](https://trends.google.com/trends/). If searches fell across the web, it isn't your site.
 5. **Site-wide or a few pages?** Sort the Pages table by click difference. Losses everywhere point to a site-wide cause (check the Page indexing report); losses on one page or section point to something on those pages (use URL Inspection).
 
 Google also says a small drop in average position, say from 2 to 4, often needs no action, because positions move all the time. Don't rewrite your site over a week of normal wobble.
@@ -113,7 +113,7 @@ That comparison is slow if you open each property in GA4 one by one. [StatPilot]
 - [Realtime report](https://support.google.com/analytics/answer/9271392) (Analytics Help)
 - [Monitor events in DebugView](https://support.google.com/analytics/answer/7201382) (Analytics Help)
 - [Consent mode on websites and mobile apps](https://support.google.com/analytics/answer/9976101) (Analytics Help)
-- [Data filters](https://support.google.com/analytics/answer/10108813) (Analytics Help)
+- [Data filters](https://support.google.com/analytics/answer/13296761) (Analytics Help)
 - [Exclude internal traffic](https://support.google.com/analytics/answer/10104470) (Analytics Help)
 - [Set up Analytics for a website and/or app](https://support.google.com/analytics/answer/9304153) (Analytics Help, reporting time zone)
 - [Known bot-traffic exclusion](https://support.google.com/analytics/answer/9888366) (Analytics Help)

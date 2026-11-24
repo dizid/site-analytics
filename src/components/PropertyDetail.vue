@@ -215,12 +215,16 @@ function getDevicePercentage(sessions: number): number {
 
         <div v-if="detail.pages.length === 0" class="text-sm text-text-muted">No page data available</div>
 
+        <!-- Phones: the path cell takes what's left and truncates (max-w-0 + w-full is the
+             table-cell way), so a long path can't push the page wider than a 320 px screen,
+             and Bounce Rate gets a gap from Views. sm and up keep the old classes (same look).
+             Same cell rule on the referrers table below. -->
         <table v-else class="w-full text-sm">
           <thead>
             <tr class="border-b border-border">
               <th class="text-left text-xs text-text-muted font-medium pb-2">Page Path</th>
               <th class="text-right text-xs text-text-muted font-medium pb-2">Views</th>
-              <th v-if="!isCloudflare" class="text-right text-xs text-text-muted font-medium pb-2">Bounce Rate</th>
+              <th v-if="!isCloudflare" class="text-right text-xs text-text-muted font-medium pb-2 pl-3 sm:pl-0">Bounce Rate</th>
             </tr>
           </thead>
           <tbody>
@@ -229,13 +233,13 @@ function getDevicePercentage(sessions: number): number {
               :key="page.pagePath"
               class="border-b border-border last:border-b-0 even:bg-white/[0.015]"
             >
-              <td class="py-2 pr-4 text-text-primary truncate max-w-[200px]" :title="page.pagePath">
+              <td class="py-2 pr-4 text-text-primary truncate max-w-0 w-full sm:w-auto sm:max-w-[200px]" :title="page.pagePath">
                 {{ page.pagePath }}
               </td>
-              <td class="py-2 text-right text-text-primary tabular-nums">
+              <td class="py-2 text-right text-text-primary tabular-nums whitespace-nowrap">
                 {{ formatNumber(page.pageviews) }}
               </td>
-              <td v-if="!isCloudflare" class="py-2 text-right text-text-primary tabular-nums">
+              <td v-if="!isCloudflare" class="py-2 pl-3 sm:pl-0 text-right text-text-primary tabular-nums whitespace-nowrap">
                 {{ page.bounceRate === undefined ? '–' : formatBounceRate(page.bounceRate) }}
               </td>
             </tr>
@@ -262,10 +266,10 @@ function getDevicePercentage(sessions: number): number {
               :key="referrer.referrer"
               class="border-b border-border last:border-b-0 even:bg-white/[0.015]"
             >
-              <td class="py-2 pr-4 text-text-primary truncate max-w-[200px]" :title="referrer.referrer">
+              <td class="py-2 pr-4 text-text-primary truncate max-w-0 w-full sm:w-auto sm:max-w-[200px]" :title="referrer.referrer">
                 {{ referrer.referrer }}
               </td>
-              <td class="py-2 text-right text-text-primary tabular-nums">
+              <td class="py-2 text-right text-text-primary tabular-nums whitespace-nowrap">
                 {{ formatNumber(referrer.sessions) }}
               </td>
             </tr>
